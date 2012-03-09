@@ -140,7 +140,7 @@ raop_rtp_resend_callback(void *opaque, unsigned short seqnum, unsigned short cou
 	addr = (struct sockaddr *)&raop_rtp->control_saddr;
 	addrlen = raop_rtp->control_saddr_len;
 
-	logger_log(raop_rtp->logger, LOGGER_INFO, "Got resend request %d %d\n", seqnum, count);
+	logger_log(raop_rtp->logger, LOGGER_DEBUG, "Got resend request %d %d\n", seqnum, count);
 	ourseqnum = raop_rtp->control_seqnum++;
 
 	/* Fill the request buffer */
@@ -246,7 +246,7 @@ raop_rtp_thread_udp(void *arg)
 			if (packetlen >= 12) {
 				char type = packet[1] & ~0x80;
 
-				logger_log(raop_rtp->logger, LOGGER_INFO, "Got control packet of type 0x%02x\n", type);
+				logger_log(raop_rtp->logger, LOGGER_DEBUG, "Got control packet of type 0x%02x\n", type);
 				if (type == 0x56) {
 					/* Handle resent data packet */
 					int ret = raop_buffer_queue(raop_rtp->buffer, packet+4, packetlen-4, 1);
