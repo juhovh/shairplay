@@ -1,1 +1,11 @@
-Some text needs to be added here.
+Licenses
+--------
+
+Following licenses apply:
+
+src/alac/*    - MIT License
+src/crypto/*  - New BSD License
+src/*         - LGPLv2.1 License
+AirTV-Qt/*    - LGPLv2.1 License
+
+I haven't had time to clarify the licenses used in the source code yet, that is on TODO list.
