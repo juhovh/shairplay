@@ -62,6 +62,7 @@ conn_init(void *opaque, unsigned char *local, int locallen, unsigned char *remot
 	for (i=0; i<locallen; i++) {
 		logger_log(&conn->raop->logger, LOGGER_INFO, "%02x", local[i]);
 	}
+	logger_log(&conn->raop->logger, LOGGER_INFO, "\n");
 	logger_log(&conn->raop->logger, LOGGER_INFO, "Remote: ");
 	for (i=0; i<remotelen; i++) {
 		logger_log(&conn->raop->logger, LOGGER_INFO, "%02x", remote[i]);
@@ -109,7 +110,7 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 		memset(signature, 0, sizeof(signature));
 		rsakey_sign(raop->rsakey, signature, sizeof(signature), challenge,
 		            conn->local, conn->locallen, raop->hwaddr, raop->hwaddrlen);
-		logger_log(&conn->raop->logger, LOGGER_INFO, "Got signature: %s\n", signature);
+		logger_log(&conn->raop->logger, LOGGER_DEBUG, "Got signature: %s\n", signature);
 		http_response_add_header(res, "Apple-Response", signature);
 	}
 	if (!strcmp(method, "OPTIONS")) {
@@ -125,15 +126,15 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 		data = http_request_get_data(request, &datalen);
 		if (data) {
 			sdp_t *sdp = sdp_init(data, datalen);
-			logger_log(&conn->raop->logger, LOGGER_INFO, "rsaaeskey: %s\n", sdp_get_rsaaeskey(sdp));
-			logger_log(&conn->raop->logger, LOGGER_INFO, "aesiv: %s\n", sdp_get_aesiv(sdp));
+			logger_log(&conn->raop->logger, LOGGER_DEBUG, "rsaaeskey: %s\n", sdp_get_rsaaeskey(sdp));
+			logger_log(&conn->raop->logger, LOGGER_DEBUG, "aesiv: %s\n", sdp_get_aesiv(sdp));
 
 			aeskeylen = rsakey_decrypt(raop->rsakey, aeskey, sizeof(aeskey),
 			                           sdp_get_rsaaeskey(sdp));
 			aesivlen = rsakey_parseiv(raop->rsakey, aesiv, sizeof(aesiv),
 			                          sdp_get_aesiv(sdp));
-			logger_log(&conn->raop->logger, LOGGER_INFO, "aeskeylen: %d\n", aeskeylen);
-			logger_log(&conn->raop->logger, LOGGER_INFO, "aesivlen: %d\n", aesivlen);
+			logger_log(&conn->raop->logger, LOGGER_DEBUG, "aeskeylen: %d\n", aeskeylen);
+			logger_log(&conn->raop->logger, LOGGER_DEBUG, "aesivlen: %d\n", aesivlen);
 
 			conn->raop_rtp = raop_rtp_init(&raop->logger, &raop->callbacks, sdp_get_fmtp(sdp), aeskey, aesiv);
 			sdp_destroy(sdp);
@@ -152,7 +153,6 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 
 		/* FIXME: Should use the parsed ports for resend */
 		raop_rtp_start(conn->raop_rtp, use_udp, 1234, 1234, &cport, &tport, &dport);
-		logger_log(&conn->raop->logger, LOGGER_INFO, "cport %d tport %d dport %d\n", cport, tport, dport);
 
 		memset(buffer, 0, sizeof(buffer));
 		if (use_udp) {
@@ -202,7 +202,7 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 	}
 	http_response_finish(res, NULL, 0);
 
-	logger_log(&conn->raop->logger, LOGGER_INFO, "Got request %s with URL %s\n", method, http_request_get_url(request));
+	logger_log(&conn->raop->logger, LOGGER_DEBUG, "Got request %s with URL %s\n", method, http_request_get_url(request));
 	*response = res;
 }
 

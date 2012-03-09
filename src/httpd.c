@@ -216,7 +216,7 @@ httpd_thread(void *arg)
 				assert(connection->request);
 			}
 
-			logger_log(httpd->logger, LOGGER_INFO, "Receiving on socket %d\n", httpd->connections[i].socket_fd);
+			logger_log(httpd->logger, LOGGER_DEBUG, "Receiving on socket %d\n", httpd->connections[i].socket_fd);
 			ret = recv(connection->socket_fd, buffer, sizeof(buffer), 0);
 			if (ret == 0) {
 				logger_log(httpd->logger, LOGGER_INFO, "Connection closed\n");
