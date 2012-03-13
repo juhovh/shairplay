@@ -1,12 +1,12 @@
-CFLAGS:=-g -Wall -Iinclude/
+CFLAGS:=-g -Wall -Isrc/include/
 LDFLAGS:=-lm
-LIB_OBJS=src/alac/alac.o src/crypto/aes.o src/crypto/bigint.o src/crypto/hmac.o src/crypto/md5.o src/crypto/rc4.o src/crypto/sha1.o src/sdp.o src/raop_buffer.o src/raop_rtp.o src/http_response.o src/http_request.o src/http_parser.o src/httpd.o src/raop.o src/rsakey.o src/rsapem.o src/dnssd.o src/netutils.o src/utils.o src/base64.o src/logger.o
+LIB_OBJS=src/lib/alac/alac.o src/lib/crypto/aes.o src/lib/crypto/bigint.o src/lib/crypto/hmac.o src/lib/crypto/md5.o src/lib/crypto/rc4.o src/lib/crypto/sha1.o src/lib/sdp.o src/lib/raop_buffer.o src/lib/raop_rtp.o src/lib/http_response.o src/lib/http_request.o src/lib/http_parser.o src/lib/httpd.o src/lib/raop.o src/lib/rsakey.o src/lib/rsapem.o src/lib/dnssd.o src/lib/netutils.o src/lib/utils.o src/lib/base64.o src/lib/logger.o
 
 
 all: example
 
-example: test/example.o $(LIB_OBJS)
-	$(CC) $(CFLAGS) test/example.o $(LIB_OBJS) -o $@ $(LDFLAGS)
+example: src/test/example.o $(LIB_OBJS)
+	$(CC) $(CFLAGS) src/test/example.o $(LIB_OBJS) -o $@ $(LDFLAGS)
 
 clean:
-	rm -f example test/*.o $(LIB_OBJS)
+	rm -f example src/test/*.o $(LIB_OBJS)
