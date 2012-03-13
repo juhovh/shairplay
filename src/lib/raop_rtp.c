@@ -179,7 +179,7 @@ raop_rtp_thread_udp(void *arg)
 
 	while(1) {
 		int volume_changed;
-		float volume;
+		float volume = 0.0;
 		int flush;
 
 		fd_set rfds;
@@ -308,7 +308,7 @@ raop_rtp_thread_tcp(void *arg)
 
 	while (1) {
 		int volume_changed;
-		float volume;
+		float volume = 0.0;
 
 		fd_set rfds;
 		struct timeval tv;

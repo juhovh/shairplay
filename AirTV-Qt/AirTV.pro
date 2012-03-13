@@ -24,34 +24,34 @@ macx {
     QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.5
 }
 
-INCLUDEPATH += ../include/
+INCLUDEPATH += ../src/include/
 SOURCES += main.cpp\
-    ../src/utils.c \
-    ../src/sdp.c \
-    ../src/rsapem.c \
-    ../src/rsakey.c \
-    ../src/raop.c \
-    ../src/raop_rtp.c \
-    ../src/raop_buffer.c \
-    ../src/netutils.c \
-    ../src/httpd.c \
-    ../src/http_response.c \
-    ../src/http_request.c \
-    ../src/http_parser.c \
-    ../src/dnssd.c \
-    ../src/base64.c \
-    ../src/alac/alac.c \
-    ../src/crypto/sha1.c \
-    ../src/crypto/rc4.c \
-    ../src/crypto/md5.c \
-    ../src/crypto/hmac.c \
-    ../src/crypto/bigint.c \
-    ../src/crypto/aes.c \
+    ../src/lib/utils.c \
+    ../src/lib/sdp.c \
+    ../src/lib/rsapem.c \
+    ../src/lib/rsakey.c \
+    ../src/lib/raop.c \
+    ../src/lib/raop_rtp.c \
+    ../src/lib/raop_buffer.c \
+    ../src/lib/netutils.c \
+    ../src/lib/httpd.c \
+    ../src/lib/http_response.c \
+    ../src/lib/http_request.c \
+    ../src/lib/http_parser.c \
+    ../src/lib/dnssd.c \
+    ../src/lib/base64.c \
+    ../src/lib/alac/alac.c \
+    ../src/lib/crypto/sha1.c \
+    ../src/lib/crypto/rc4.c \
+    ../src/lib/crypto/md5.c \
+    ../src/lib/crypto/hmac.c \
+    ../src/lib/crypto/bigint.c \
+    ../src/lib/crypto/aes.c \
+    ../src/lib/logger.c \
     audiooutput.cpp \
     raopservice.cpp \
     mainapplication.cpp \
-    raopcallbackhandler.cpp \
-    ../src/logger.c
+    raopcallbackhandler.cpp
 
 HEADERS  += \
     audiooutput.h \
