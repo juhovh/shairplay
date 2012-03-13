@@ -5,3 +5,10 @@
 *.swp
 project.xcworkspace
 xcuserdata
+
+# SCons specific
+build
+.sconf_temp
+.sconsign.dblite
+config.log
+
