@@ -1,0 +1,58 @@
+Import('env')
+
+files = [Glob('lib/*.c'),Glob('lib/alac/*.c'),Glob('lib/crypto/*.c')]
+
+env.Append(CPPPATH = ['include'])
+
+# Set up the environment for compiling the libraries
+libenv = env.Clone()
+libenv.Append(CPPPATH = ['lib'])
+
+# Make sure libraries are compiled with DLL_EXPORT on windows
+if libenv['PLATFORM'] == 'win32' or GetOption('mingw32') or GetOption('mingw64'):
+        libenv.Append(CPPDEFINES = ['DLL_EXPORT'])
+
+# Prepare the libobj and shlibobj object files
+libobj = libenv.Object(files)
+if libenv['STATIC_AND_SHARED_OBJECTS_ARE_THE_SAME']:
+        shlibobj = libobj
+else:
+        shlibobj = libenv.SharedObject(files)
+
+# Compile the static library into lib directory and shared library
+# for the bindings
+if not libenv['STATIC_AND_SHARED_OBJECTS_ARE_THE_SAME']:
+        libenv.Library('airplay', libobj, install=False)
+libenv.SharedLibrary('airplay', shlibobj, install=False)
+
+# If we want to create universal binaries of the dynamic library on Mac, do it here
+if GetOption('universal'):
+        libenv["ENV"]["MACOSX_DEPLOYMENT_TARGET"] = "10.4"
+        libenv.Append(CFLAGS = ['-arch', 'i386', '-arch', 'x86_64'])
+        libenv32 = libenv.Clone()
+        libenv64 = libenv.Clone()
+
+        libenv32.Append(LINKFLAGS = ['-undefined', 'dynamic_lookup'])
+        libenv32.Append(LINKFLAGS = ['-arch', 'i386'])
+        libenv32.Append(LINKFLAGS = ['-install_name', 'libairplay32.dylib'])
+        libenv32.SharedLibrary('airplay32', shlibobj, install=False)
+
+        libenv64.Append(LINKFLAGS = ['-undefined', 'dynamic_lookup'])
+        libenv64.Append(LINKFLAGS = ['-arch', 'x86_64'])
+        libenv64.Append(LINKFLAGS = ['-install_name', 'libairplay64.dylib'])
+        libenv64.SharedLibrary('airplay64', shlibobj, install=False)
+
+        libenv.Append(LINKFLAGS = ['-undefined', 'dynamic_lookup'])
+        libenv.Append(LINKFLAGS = ['-arch', 'i386', '-arch', 'x86_64'])
+        libenv.Append(LINKFLAGS = ['-install_name', 'libairplay.dylib'])
+
+# Set up the environment for compiling the examples
+appenv = env.Clone()
+conf = Configure(appenv)
+conf.CheckLib('pthread')
+appenv = conf.Finish()
+appenv.Append(LIBPATH = ['.'])
+appenv.Prepend(LIBS = ['airplay'])
+
+exampleobj = appenv.Object(['test/example.c'])
+appenv.Program('example', exampleobj, install=False)
