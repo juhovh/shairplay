@@ -39,6 +39,7 @@ struct httpd_s {
 	int use_rtsp;
 
 	int max_connections;
+	int open_connections;
 	http_connection_t *connections;
 
 	/* These variables only edited mutex locked */
@@ -115,6 +116,7 @@ httpd_add_connection(httpd_t *httpd, int fd, unsigned char *local, int local_len
 		return;
 	}
 
+	httpd->open_connections++;
 	httpd->connections[i].socket_fd = fd;
 	httpd->connections[i].connected = 1;
 	httpd->connections[i].user_data = httpd->callbacks.conn_init(httpd->callbacks.opaque, local, local_len, remote, remote_len);
@@ -131,6 +133,7 @@ httpd_remove_connection(httpd_t *httpd, http_connection_t *connection)
 	shutdown(connection->socket_fd, SHUT_WR);
 	closesocket(connection->socket_fd);
 	connection->connected = 0;
+	httpd->open_connections--;
 }
 
 static THREAD_RETVAL
@@ -161,8 +164,10 @@ httpd_thread(void *arg)
 
 		/* Get the correct nfds value and set rfds */
 		FD_ZERO(&rfds);
-		FD_SET(httpd->server_fd, &rfds);
-		nfds = httpd->server_fd+1;
+		if (httpd->open_connections < httpd->max_connections) {
+			FD_SET(httpd->server_fd, &rfds);
+			nfds = httpd->server_fd+1;
+		}
 		for (i=0; i<httpd->max_connections; i++) {
 			int socket_fd;
 			if (!httpd->connections[i].connected) {
