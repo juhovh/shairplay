@@ -18,6 +18,7 @@
 #include <assert.h>
 
 #include "logger.h"
+#include "compat.h"
 
 void
 logger_init(logger_t *logger)

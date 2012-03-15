@@ -97,7 +97,6 @@ extern "C" {
 #define strdup(A)               _strdup(A)
 #define chroot(A)               _chdir(A)
 #define chdir(A)                _chdir(A)
-#define alloca(A)               _alloca(A)
 #ifndef lseek
 #define lseek(A,B,C)            _lseek(A,B,C)
 #endif
@@ -108,7 +107,7 @@ extern "C" {
    see http://www.khngai.com/emacs/tty.php  */
 #define TTY_FLUSH()             if (!_isatty(_fileno(stdout))) fflush(stdout);
 
-/*
+
 typedef UINT8 uint8_t;
 typedef INT8 int8_t;
 typedef UINT16 uint16_t;
@@ -118,7 +117,6 @@ typedef INT32 int32_t;
 typedef UINT64 uint64_t;
 typedef INT64 int64_t;
 typedef int socklen_t;
-*/
 
 #else   /* Not Win32 */
 

@@ -16,8 +16,8 @@
 #define COMPAT_H
 
 #if defined(WIN32)
-#include <windows.h>
 #include <ws2tcpip.h>
+#include <windows.h>
 #else
 #include <sys/types.h>
 #include <sys/socket.h>

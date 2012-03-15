@@ -379,7 +379,6 @@ raop_rtp_thread_tcp(void *arg)
 		}
 		if (stream_fd != -1 && FD_ISSET(stream_fd, &rfds)) {
 			unsigned int rtplen=0;
-			char type;
 
 			const void *audiobuf;
 			int audiobuflen;
@@ -415,7 +414,6 @@ raop_rtp_thread_tcp(void *arg)
 			}
 
 			/* Packet is valid, process it */
-			type = packet[4+1] & ~0x80;
 			ret = raop_buffer_queue(raop_rtp->buffer, packet+4, rtplen, 0);
 			assert(ret >= 0);
 
