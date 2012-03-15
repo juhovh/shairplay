@@ -179,6 +179,7 @@ raop_rtp_thread_udp(void *arg)
 	unsigned int packetlen;
 	struct sockaddr_storage saddr;
 	socklen_t saddrlen;
+	float volume = 0.0;
 
 	const ALACSpecificConfig *config;
 	void *cb_data = NULL;
@@ -193,7 +194,6 @@ raop_rtp_thread_udp(void *arg)
 
 	while(1) {
 		int volume_changed;
-		float volume = 0.0;
 		int flush;
 
 		fd_set rfds;
@@ -308,6 +308,7 @@ raop_rtp_thread_tcp(void *arg)
 	int stream_fd = -1;
 	unsigned char packet[RAOP_PACKET_LEN];
 	unsigned int packetlen = 0;
+	float volume = 0.0;
 
 	const ALACSpecificConfig *config;
 	void *cb_data = NULL;
@@ -322,7 +323,6 @@ raop_rtp_thread_tcp(void *arg)
 
 	while (1) {
 		int volume_changed;
-		float volume = 0.0;
 
 		fd_set rfds;
 		struct timeval tv;
