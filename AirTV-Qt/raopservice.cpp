@@ -80,6 +80,7 @@ RaopService::~RaopService()
 bool RaopService::init()
 {
     const char hwaddr[] = { 0x48, 0x5d, 0x60, 0x7c, 0xee, 0x22 };
+
     raop_callbacks_t raop_cbs;
     int error;
 
@@ -106,7 +107,7 @@ bool RaopService::init()
     QByteArray array = file.read(file.size());
     array.append('\0');
 
-    m_raop = raop_init(&raop_cbs, array.data(), hwaddr, sizeof(hwaddr));
+    m_raop = raop_init(&raop_cbs, array.data());
     if (!m_raop) {
         return false;
     }
@@ -123,12 +124,14 @@ bool RaopService::init()
 
 bool RaopService::start(const QString & name, quint16 port)
 {
+    const char hwaddr[] = { 0x48, 0x5d, 0x60, 0x7c, 0xee, 0x22 };
+
     if (!m_raop || !m_dnssd || m_thread.isRunning()) {
         return false;
     }
 
     m_thread.start();
-    if (raop_start(m_raop, &port) < 0) {
+    if (raop_start(m_raop, &port, hwaddr, sizeof(hwaddr)) < 0) {
         m_thread.quit();
         m_thread.wait();
         return false;

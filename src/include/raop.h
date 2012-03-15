@@ -16,10 +16,10 @@ struct raop_callbacks_s {
 };
 typedef struct raop_callbacks_s raop_callbacks_t;
 
-raop_t *raop_init(raop_callbacks_t *callbacks, const char *pemkey, const char *hwaddr, int hwaddrlen);
-raop_t *raop_init_from_keyfile(raop_callbacks_t *callbacks, const char *keyfile, const char *hwaddr, int hwaddrlen);
+raop_t *raop_init(raop_callbacks_t *callbacks, const char *pemkey);
+raop_t *raop_init_from_keyfile(raop_callbacks_t *callbacks, const char *keyfile);
 
-int raop_start(raop_t *raop, unsigned short *port);
+int raop_start(raop_t *raop, unsigned short *port, const char *hwaddr, int hwaddrlen);
 void raop_stop(raop_t *raop);
 
 void raop_destroy(raop_t *raop);

@@ -56,8 +56,8 @@ main(int argc, char *argv[])
 	raop_cbs.audio_flush = audio_flush;
 	raop_cbs.audio_destroy = audio_destroy;
 
-	raop = raop_init_from_keyfile(&raop_cbs, "airport.key", hwaddr, sizeof(hwaddr));
-	raop_start(raop, &raop_port);
+	raop = raop_init_from_keyfile(&raop_cbs, "airport.key");
+	raop_start(raop, &raop_port, hwaddr, sizeof(hwaddr));
 
 	dnssd = dnssd_init(hwaddr, sizeof(hwaddr), NULL);
 	dnssd_register_raop(dnssd, name, raop_port);
