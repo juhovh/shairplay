@@ -2,6 +2,10 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#ifdef WIN32
+#include <windows.h>
+#endif
+
 #include "dnssd.h"
 #include "raop.h"
 
@@ -62,7 +66,11 @@ main(int argc, char *argv[])
 	dnssd = dnssd_init(hwaddr, sizeof(hwaddr), NULL);
 	dnssd_register_raop(dnssd, name, raop_port);
 
+#ifndef WIN32
 	sleep(100);
+#else
+	Sleep(100*1000);
+#endif
 
 	dnssd_unregister_raop(dnssd);
 	dnssd_destroy(dnssd);
