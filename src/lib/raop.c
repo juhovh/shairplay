@@ -234,7 +234,7 @@ conn_destroy(void *ptr)
 }
 
 raop_t *
-raop_init(raop_callbacks_t *callbacks, const char *pemkey, const char *hwaddr, int hwaddrlen)
+raop_init(raop_callbacks_t *callbacks, const char *pemkey)
 {
 	raop_t *raop;
 	httpd_t *httpd;
@@ -243,7 +243,6 @@ raop_init(raop_callbacks_t *callbacks, const char *pemkey, const char *hwaddr, i
 
 	assert(callbacks);
 	assert(pemkey);
-	assert(hwaddr);
 
 	/* Initialize the network */
 	if (netutils_init() < 0) {
@@ -254,11 +253,6 @@ raop_init(raop_callbacks_t *callbacks, const char *pemkey, const char *hwaddr, i
 	if (!callbacks->audio_init || !callbacks->audio_set_volume ||
 	    !callbacks->audio_process || !callbacks->audio_flush ||
 	    !callbacks->audio_destroy) {
-		return NULL;
-	}
-
-	/* Validate hardware address */
-	if (hwaddrlen > MAX_HWADDR_LEN) {
 		return NULL;
 	}
 
@@ -299,15 +293,11 @@ raop_init(raop_callbacks_t *callbacks, const char *pemkey, const char *hwaddr, i
 	raop->httpd = httpd;
 	raop->rsakey = rsakey;
 
-	/* Copy hwaddr to resulting structure */
-	memcpy(raop->hwaddr, hwaddr, hwaddrlen);
-	raop->hwaddrlen = hwaddrlen;
-
 	return raop;
 }
 
 raop_t *
-raop_init_from_keyfile(raop_callbacks_t *callbacks, const char *keyfile, const char *hwaddr, int hwaddrlen)
+raop_init_from_keyfile(raop_callbacks_t *callbacks, const char *keyfile)
 {
 	raop_t *raop;
 	char *pemstr;
@@ -315,7 +305,7 @@ raop_init_from_keyfile(raop_callbacks_t *callbacks, const char *keyfile, const c
 	if (utils_read_file(&pemstr, keyfile) < 0) {
 		return NULL;
 	}
-	raop = raop_init(callbacks, pemstr, hwaddr, hwaddrlen);
+	raop = raop_init(callbacks, pemstr);
 	free(pemstr);
 	return raop;
 }
@@ -336,10 +326,20 @@ raop_destroy(raop_t *raop)
 }
 
 int
-raop_start(raop_t *raop, unsigned short *port)
+raop_start(raop_t *raop, unsigned short *port, const char *hwaddr, int hwaddrlen)
 {
 	assert(raop);
 	assert(port);
+	assert(hwaddr);
+
+	/* Validate hardware address */
+	if (hwaddrlen > MAX_HWADDR_LEN) {
+		return -1;
+	}
+
+	/* Copy hwaddr to the raop structure */
+	memcpy(raop->hwaddr, hwaddr, hwaddrlen);
+	raop->hwaddrlen = hwaddrlen;
 
 	return httpd_start(raop->httpd, port);
 }
