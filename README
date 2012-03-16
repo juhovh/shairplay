@@ -3,11 +3,11 @@ Licenses
 
 Following licenses apply:
 
-src/alac/*         - MIT License
-src/crypto/*       - New BSD License
-src/http_parser.*  - MIT License
-src/*              - LGPLv2.1 License
-AirTV-Qt/*         - LGPLv2.1 License
+src/lib/alac/*         - MIT License
+src/lib/crypto/*       - New BSD License
+src/lib/http_parser.*  - MIT License
+src/lib/*              - LGPLv2.1 License
+AirTV-Qt/*             - LGPLv2.1 License
 
 Also the following files are used, although not necessary:
 
@@ -18,21 +18,21 @@ Description
 
 Short description about what each file in the main library does:
 
-src/base64.*         - base64 encoder/decoder
-src/dnssd.*          - dnssd helper functions
-src/http_parser.*    - HTTP parser from joyent (nginx fork)
-src/http_request.*   - Request parser that uses http_parser
-src/http_response.*  - Extremely simple HTTP response serializer
-src/httpd.*          - Generic HTTP/RTSP server
-src/logger.*         - Logging related functions
-src/netutils.*       - Mostly socket related code
-src/raop.*           - Main RAOP handler, handles all RTSP stuff
-src/raop_rtp.*       - Handles the RAOP RTP related stuff (UDP/TCP)
-src/raop_buffer.*    - Parses and buffers RAOP packets, resend logic here
-src/rsakey.*         - Decrypts and parses the RSA key to bigints
-src/rsapem.*         - Converts the RSA PEM key to DER encoded bytes
-src/sdp.*            - Extremely simple RAOP specific SDP parser
-src/utils.*          - Utils for reading a file and handling strings
+src/lib/base64.*         - base64 encoder/decoder
+src/lib/dnssd.*          - dnssd helper functions
+src/lib/http_parser.*    - HTTP parser from joyent (nginx fork)
+src/lib/http_request.*   - Request parser that uses http_parser
+src/lib/http_response.*  - Extremely simple HTTP response serializer
+src/lib/httpd.*          - Generic HTTP/RTSP server
+src/lib/logger.*         - Logging related functions
+src/lib/netutils.*       - Mostly socket related code
+src/lib/raop.*           - Main RAOP handler, handles all RTSP stuff
+src/lib/raop_rtp.*       - Handles the RAOP RTP related stuff (UDP/TCP)
+src/lib/raop_buffer.*    - Parses and buffers RAOP packets, resend logic here
+src/lib/rsakey.*         - Decrypts and parses the RSA key to bigints
+src/lib/rsapem.*         - Converts the RSA PEM key to DER encoded bytes
+src/lib/sdp.*            - Extremely simple RAOP specific SDP parser
+src/lib/utils.*          - Utils for reading a file and handling strings
 
 Short description about what each file in the Qt application does:
 
