@@ -28,12 +28,13 @@
 
 #ifndef WIN32
 # include <dns_sd.h>
+# define DNSSD_STDCALL
 #else
 # include <stdint.h>
 # if !defined(EFI32) && !defined(EFI64)
-#  define DNSSD_API __stdcall
+#  define DNSSD_STDCALL __stdcall
 # else
-#  define DNSSD_API
+#  define DNSSD_STDCALL
 # endif
 
 typedef struct _DNSServiceRef_t *DNSServiceRef;
@@ -42,7 +43,7 @@ typedef union _TXTRecordRef_t { char PrivateData[16]; char *ForceNaturalAlignmen
 typedef uint32_t DNSServiceFlags;
 typedef int32_t  DNSServiceErrorType;
 
-typedef void (DNSSD_API *DNSServiceRegisterReply)
+typedef void (DNSSD_STDCALL *DNSServiceRegisterReply)
     (
     DNSServiceRef                       sdRef,
     DNSServiceFlags                     flags,
@@ -54,7 +55,7 @@ typedef void (DNSSD_API *DNSServiceRegisterReply)
     );
 #endif
 
-typedef DNSServiceErrorType (DNSSD_API *DNSServiceRegister_t)
+typedef DNSServiceErrorType (DNSSD_STDCALL *DNSServiceRegister_t)
     (
     DNSServiceRef                       *sdRef,
     DNSServiceFlags                     flags,
@@ -69,23 +70,23 @@ typedef DNSServiceErrorType (DNSSD_API *DNSServiceRegister_t)
     DNSServiceRegisterReply             callBack,
     void                                *context
     );
-typedef void (DNSSD_API *DNSServiceRefDeallocate_t)(DNSServiceRef sdRef);
-typedef void (DNSSD_API *TXTRecordCreate_t)
+typedef void (DNSSD_STDCALL *DNSServiceRefDeallocate_t)(DNSServiceRef sdRef);
+typedef void (DNSSD_STDCALL *TXTRecordCreate_t)
     (
     TXTRecordRef     *txtRecord,
     uint16_t         bufferLen,
     void             *buffer
     );
-typedef void (DNSSD_API *TXTRecordDeallocate_t)(TXTRecordRef *txtRecord);
-typedef DNSServiceErrorType (DNSSD_API *TXTRecordSetValue_t)
+typedef void (DNSSD_STDCALL *TXTRecordDeallocate_t)(TXTRecordRef *txtRecord);
+typedef DNSServiceErrorType (DNSSD_STDCALL *TXTRecordSetValue_t)
     (
     TXTRecordRef     *txtRecord,
     const char       *key,
     uint8_t          valueSize,
     const void       *value
     );
-typedef uint16_t (DNSSD_API *TXTRecordGetLength_t)(const TXTRecordRef *txtRecord);
-typedef const void * (DNSSD_API *TXTRecordGetBytesPtr_t)(const TXTRecordRef *txtRecord);
+typedef uint16_t (DNSSD_STDCALL *TXTRecordGetLength_t)(const TXTRecordRef *txtRecord);
+typedef const void * (DNSSD_STDCALL *TXTRecordGetBytesPtr_t)(const TXTRecordRef *txtRecord);
 
 
 struct dnssd_s {
