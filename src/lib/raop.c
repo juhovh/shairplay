@@ -63,7 +63,6 @@ static void *
 conn_init(void *opaque, unsigned char *local, int locallen, unsigned char *remote, int remotelen)
 {
 	raop_conn_t *conn;
-	int i;
 
 	conn = calloc(1, sizeof(raop_conn_t));
 	if (!conn) {
@@ -72,16 +71,26 @@ conn_init(void *opaque, unsigned char *local, int locallen, unsigned char *remot
 	conn->raop = opaque;
 	conn->raop_rtp = NULL;
 
-	logger_log(&conn->raop->logger, LOGGER_INFO, "Local: ");
-	for (i=0; i<locallen; i++) {
-		logger_log(&conn->raop->logger, LOGGER_INFO, "%02x", local[i]);
+	if (locallen == 4) {
+		logger_log(&conn->raop->logger, LOGGER_INFO,
+		           "Local: %d.%d.%d.%d\n",
+		           local[0], local[1], local[2], local[3]);
+	} else if (locallen == 16) {
+		logger_log(&conn->raop->logger, LOGGER_INFO,
+		           "Local: %02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x\n",
+		           local[0], local[1], local[2], local[3], local[4], local[5], local[6], local[7],
+		           local[8], local[9], local[10], local[11], local[12], local[13], local[14], local[15]);
 	}
-	logger_log(&conn->raop->logger, LOGGER_INFO, "\n");
-	logger_log(&conn->raop->logger, LOGGER_INFO, "Remote: ");
-	for (i=0; i<remotelen; i++) {
-		logger_log(&conn->raop->logger, LOGGER_INFO, "%02x", remote[i]);
+	if (remotelen == 4) {
+		logger_log(&conn->raop->logger, LOGGER_INFO,
+		           "Remote: %d.%d.%d.%d\n",
+		           remote[0], remote[1], remote[2], remote[3]);
+	} else if (remotelen == 16) {
+		logger_log(&conn->raop->logger, LOGGER_INFO,
+		           "Remote: %02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x\n",
+		           remote[0], remote[1], remote[2], remote[3], remote[4], remote[5], remote[6], remote[7],
+		           remote[8], remote[9], remote[10], remote[11], remote[12], remote[13], remote[14], remote[15]);
 	}
-	logger_log(&conn->raop->logger, LOGGER_INFO, "\n");
 
 	conn->local = malloc(locallen);
 	assert(conn->local);
@@ -124,8 +133,10 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 		memset(signature, 0, sizeof(signature));
 		rsakey_sign(raop->rsakey, signature, sizeof(signature), challenge,
 		            conn->local, conn->locallen, raop->hwaddr, raop->hwaddrlen);
-		logger_log(&conn->raop->logger, LOGGER_DEBUG, "Got signature: %s\n", signature);
 		http_response_add_header(res, "Apple-Response", signature);
+
+		logger_log(&conn->raop->logger, LOGGER_DEBUG, "Got challenge: %s\n", challenge);
+		logger_log(&conn->raop->logger, LOGGER_DEBUG, "Got response: %s\n", signature);
 	}
 	if (!strcmp(method, "OPTIONS")) {
 		http_response_add_header(res, "Public", "ANNOUNCE, SETUP, RECORD, PAUSE, FLUSH, TEARDOWN, OPTIONS, GET_PARAMETER, SET_PARAMETER");
@@ -150,6 +161,11 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 			logger_log(&conn->raop->logger, LOGGER_DEBUG, "aeskeylen: %d\n", aeskeylen);
 			logger_log(&conn->raop->logger, LOGGER_DEBUG, "aesivlen: %d\n", aesivlen);
 
+			if (conn->raop_rtp) {
+				/* This should never happen */
+				raop_rtp_destroy(conn->raop_rtp);
+				conn->raop_rtp = NULL;
+			}
 			conn->raop_rtp = raop_rtp_init(&raop->logger, &raop->callbacks, sdp_get_fmtp(sdp), aeskey, aesiv);
 			sdp_destroy(sdp);
 		}
@@ -188,7 +204,7 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 
 		data = http_request_get_data(request, &datalen);
 		datastr = calloc(1, datalen+1);
-		if (datastr) {
+		if (data && datastr && conn->raop_rtp) {
 			memcpy(datastr, data, datalen);
 			if (!strncmp(datastr, "volume: ", 8)) {
 				float vol = 0.0;
@@ -201,18 +217,23 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 		int next_seq = -1;
 
 		rtpinfo = http_request_get_header(request, "RTP-Info");
-		assert(rtpinfo);
-
-		logger_log(&conn->raop->logger, LOGGER_INFO, "RTP-Info: %s\n", rtpinfo);
-		if (!strncmp(rtpinfo, "seq=", 4)) {
-			next_seq = strtol(rtpinfo+4, NULL, 10);
+		if (rtpinfo) {
+			logger_log(&conn->raop->logger, LOGGER_INFO, "Flush with RTP-Info: %s\n", rtpinfo);
+			if (!strncmp(rtpinfo, "seq=", 4)) {
+				next_seq = strtol(rtpinfo+4, NULL, 10);
+			}
 		}
-		raop_rtp_flush(conn->raop_rtp, next_seq);
+		if (conn->raop_rtp) {
+			raop_rtp_flush(conn->raop_rtp, next_seq);
+		}
 	} else if (!strcmp(method, "TEARDOWN")) {
 		http_response_add_header(res, "Connection", "close");
-		raop_rtp_stop(conn->raop_rtp);
-		raop_rtp_destroy(conn->raop_rtp);
-		conn->raop_rtp = NULL;
+		if (conn->raop_rtp) {
+			/* Destroy our RTP session */
+			raop_rtp_stop(conn->raop_rtp);
+			raop_rtp_destroy(conn->raop_rtp);
+			conn->raop_rtp = NULL;
+		}
 	}
 	http_response_finish(res, NULL, 0);
 
@@ -226,6 +247,7 @@ conn_destroy(void *ptr)
 	raop_conn_t *conn = ptr;
 
 	if (conn->raop_rtp) {
+		/* This is done in case TEARDOWN was not called */
 		raop_rtp_destroy(conn->raop_rtp);
 	}
 	free(conn->local);
