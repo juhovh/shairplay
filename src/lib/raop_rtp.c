@@ -22,6 +22,7 @@
 #include "raop.h"
 #include "raop_buffer.h"
 #include "netutils.h"
+#include "utils.h"
 #include "compat.h"
 #include "logger.h"
 
@@ -31,7 +32,12 @@ struct raop_rtp_s {
 	logger_t *logger;
 	raop_callbacks_t callbacks;
 
+	/* Buffer to handle all resends */
 	raop_buffer_t *buffer;
+
+	/* Remote address as sockaddr */
+	struct sockaddr_storage remote_saddr;
+	socklen_t remote_saddr_len;
 
 	/* These variables only edited mutex locked */
 	int running;
@@ -53,18 +59,63 @@ struct raop_rtp_s {
 	unsigned short timing_lport;
 	unsigned short data_lport;
 
+	/* Initialized after the first control packet */
 	struct sockaddr_storage control_saddr;
 	socklen_t control_saddr_len;
 	unsigned short control_seqnum;
 };
 
+static int
+raop_rtp_parse_remote(raop_rtp_t *raop_rtp, const char *remote)
+{
+	char *original;
+	char *current;
+	char *tmpstr;
+	int family;
+	int ret;
+
+	assert(raop_rtp);
+
+	current = original = strdup(remote);
+	if (!original) {
+		return -1;
+	}
+	tmpstr = utils_strsep(&current, " ");
+	if (strcmp(tmpstr, "IN")) {
+		free(original);
+		return -1;
+	}
+	tmpstr = utils_strsep(&current, " ");
+	if (!strcmp(tmpstr, "IP4") && current) {
+		family = AF_INET;
+	} else if (!strcmp(tmpstr, "IP6") && current) {
+		family = AF_INET6;
+	} else {
+		free(original);
+		return -1;
+	}
+	ret = netutils_parse_address(family, current,
+	                             &raop_rtp->remote_saddr,
+	                             sizeof(raop_rtp->remote_saddr));
+	if (ret < 0) {
+		free(original);
+		return -1;
+	}
+	raop_rtp->remote_saddr_len = ret;
+	free(original);
+	return 0;
+}
+
 raop_rtp_t *
-raop_rtp_init(logger_t *logger, raop_callbacks_t *callbacks, const char *fmtp,
-              const unsigned char *aeskey, const unsigned char *aesiv)
+raop_rtp_init(logger_t *logger, raop_callbacks_t *callbacks, const char *remote,
+              const char *fmtp, const unsigned char *aeskey, const unsigned char *aesiv)
 {
 	raop_rtp_t *raop_rtp;
 
 	assert(logger);
+	assert(callbacks);
+	assert(remote);
+	assert(fmtp);
 
 	raop_rtp = calloc(1, sizeof(raop_rtp_t));
 	if (!raop_rtp) {
@@ -74,6 +125,10 @@ raop_rtp_init(logger_t *logger, raop_callbacks_t *callbacks, const char *fmtp,
 	memcpy(&raop_rtp->callbacks, callbacks, sizeof(raop_callbacks_t));
 	raop_rtp->buffer = raop_buffer_init(fmtp, aeskey, aesiv);
 	if (!raop_rtp->buffer) {
+		free(raop_rtp);
+		return NULL;
+	}
+	if (raop_rtp_parse_remote(raop_rtp, remote) < 0) {
 		free(raop_rtp);
 		return NULL;
 	}
@@ -150,6 +205,7 @@ raop_rtp_resend_callback(void *opaque, unsigned short seqnum, unsigned short cou
 	unsigned short ourseqnum;
 	struct sockaddr *addr;
 	socklen_t addrlen;
+	int ret;
 
 	addr = (struct sockaddr *)&raop_rtp->control_saddr;
 	addrlen = raop_rtp->control_saddr_len;
@@ -167,7 +223,11 @@ raop_rtp_resend_callback(void *opaque, unsigned short seqnum, unsigned short cou
 	packet[6] = (count >> 8);
 	packet[7] =  count;
 
-	sendto(raop_rtp->csock, (const char *)packet, sizeof(packet), 0, addr, addrlen);
+	ret = sendto(raop_rtp->csock, (const char *)packet, sizeof(packet), 0, addr, addrlen);
+	if (ret == -1) {
+		logger_log(raop_rtp->logger, LOGGER_WARNING, "Resend failed: %d\n", SOCKET_GET_ERROR());
+	}
+
 	return 0;
 }
 
@@ -253,7 +313,7 @@ raop_rtp_thread_udp(void *arg)
 			packetlen = recvfrom(raop_rtp->csock, (char *)packet, sizeof(packet), 0,
 			                     (struct sockaddr *)&saddr, &saddrlen);
 
-			/* FIXME: Get destination address here */
+			/* Get the destination address here, because we need the sin6_scope_id */
 			memcpy(&raop_rtp->control_saddr, &saddr, saddrlen);
 			raop_rtp->control_saddr_len = saddrlen;
 
@@ -443,6 +503,8 @@ void
 raop_rtp_start(raop_rtp_t *raop_rtp, int use_udp, unsigned short control_rport, unsigned short timing_rport,
                unsigned short *control_lport, unsigned short *timing_lport, unsigned short *data_lport)
 {
+	int use_ipv6 = 0;
+
 	assert(raop_rtp);
 
 	MUTEX_LOCK(raop_rtp->run_mutex);
@@ -454,7 +516,10 @@ raop_rtp_start(raop_rtp_t *raop_rtp, int use_udp, unsigned short control_rport, 
 	/* Initialize ports and sockets */
 	raop_rtp->control_rport = control_rport;
 	raop_rtp->timing_rport = timing_rport;
-	if (raop_rtp_init_sockets(raop_rtp, 1, use_udp) < 0) {
+	if (raop_rtp->remote_saddr.ss_family == AF_INET6) {
+		use_ipv6 = 1;
+	}
+	if (raop_rtp_init_sockets(raop_rtp, use_ipv6, use_udp) < 0) {
 		logger_log(raop_rtp->logger, LOGGER_INFO, "Initializing sockets failed\n");
 		MUTEX_UNLOCK(raop_rtp->run_mutex);
 		return;

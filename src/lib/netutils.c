@@ -151,3 +151,39 @@ netutils_get_address(void *sockaddr, int *length)
 	return NULL;
 }
 
+int
+netutils_parse_address(int family, const char *src, void *dst, int dstlen)
+{
+	struct addrinfo *result;
+	struct addrinfo *ptr;
+	struct addrinfo hints;
+	int length;
+	int ret;
+
+	if (family != AF_INET && family != AF_INET6) {
+		return -1;
+	}
+	if (!src || !dst) {
+		return -1;
+	}
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = family;
+	hints.ai_flags = AI_PASSIVE | AI_NUMERICHOST;
+
+	ret = getaddrinfo(src, NULL, &hints, &result);
+	if (ret != 0) {
+		return -1;
+	}
+
+	length = -1;
+	for (ptr=result; ptr!=NULL; ptr=ptr->ai_next) {
+		if (family == ptr->ai_family && dstlen >= ptr->ai_addrlen) {
+			memcpy(dst, ptr->ai_addr, ptr->ai_addrlen);
+			length = ptr->ai_addrlen;
+			break;
+		}
+	}
+	freeaddrinfo(result);
+	return length;
+}

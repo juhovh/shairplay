@@ -150,14 +150,22 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 
 		data = http_request_get_data(request, &datalen);
 		if (data) {
-			sdp_t *sdp = sdp_init(data, datalen);
-			logger_log(&conn->raop->logger, LOGGER_DEBUG, "rsaaeskey: %s\n", sdp_get_rsaaeskey(sdp));
-			logger_log(&conn->raop->logger, LOGGER_DEBUG, "aesiv: %s\n", sdp_get_aesiv(sdp));
+			sdp_t *sdp;
+			const char *remotestr, *fmtpstr, *aeskeystr, *aesivstr;
 
-			aeskeylen = rsakey_decrypt(raop->rsakey, aeskey, sizeof(aeskey),
-			                           sdp_get_rsaaeskey(sdp));
-			aesivlen = rsakey_parseiv(raop->rsakey, aesiv, sizeof(aesiv),
-			                          sdp_get_aesiv(sdp));
+			sdp = sdp_init(data, datalen);
+			remotestr = sdp_get_connection(sdp);
+			fmtpstr = sdp_get_fmtp(sdp);
+			aeskeystr = sdp_get_rsaaeskey(sdp);
+			aesivstr = sdp_get_aesiv(sdp);
+
+			logger_log(&conn->raop->logger, LOGGER_DEBUG, "connection: %s\n", remotestr);
+			logger_log(&conn->raop->logger, LOGGER_DEBUG, "fmtp: %s\n", fmtpstr);
+			logger_log(&conn->raop->logger, LOGGER_DEBUG, "rsaaeskey: %s\n", aeskeystr);
+			logger_log(&conn->raop->logger, LOGGER_DEBUG, "aesiv: %s\n", aesivstr);
+
+			aeskeylen = rsakey_decrypt(raop->rsakey, aeskey, sizeof(aeskey), aeskeystr);
+			aesivlen = rsakey_parseiv(raop->rsakey, aesiv, sizeof(aesiv), aesivstr);
 			logger_log(&conn->raop->logger, LOGGER_DEBUG, "aeskeylen: %d\n", aeskeylen);
 			logger_log(&conn->raop->logger, LOGGER_DEBUG, "aesivlen: %d\n", aesivlen);
 
@@ -166,10 +174,11 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 				raop_rtp_destroy(conn->raop_rtp);
 				conn->raop_rtp = NULL;
 			}
-			conn->raop_rtp = raop_rtp_init(&raop->logger, &raop->callbacks, sdp_get_fmtp(sdp), aeskey, aesiv);
+			conn->raop_rtp = raop_rtp_init(&raop->logger, &raop->callbacks, remotestr, fmtpstr, aeskey, aesiv);
 			sdp_destroy(sdp);
 		}
 	} else if (!strcmp(method, "SETUP")) {
+		unsigned short remote_cport=0, remote_tport=0;
 		unsigned short cport=0, tport=0, dport=0;
 		const char *transport;
 		char buffer[1024];
@@ -180,14 +189,35 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 
 		logger_log(&conn->raop->logger, LOGGER_INFO, "Transport: %s\n", transport);
 		use_udp = strncmp(transport, "RTP/AVP/TCP", 11);
+		if (use_udp) {
+			char *original, *current, *tmpstr;
 
-		/* FIXME: Should use the parsed ports for resend */
-		raop_rtp_start(conn->raop_rtp, use_udp, 1234, 1234, &cport, &tport, &dport);
+			current = original = strdup(transport);
+			if (original) {
+				while ((tmpstr = utils_strsep(&current, ";")) != NULL) {
+					unsigned short value;
+					int ret;
+
+					ret = sscanf(tmpstr, "control_port=%hu", &value);
+					if (ret == 1) {
+						logger_log(&conn->raop->logger, LOGGER_DEBUG, "Found remote control port: %hu\n", value);
+						remote_cport = value;
+					}
+					ret = sscanf(tmpstr, "timing_port=%hu", &value);
+					if (ret == 1) {
+						logger_log(&conn->raop->logger, LOGGER_DEBUG, "Found remote timing port: %hu\n", value);
+						remote_tport = value;
+					}
+				}
+			}
+			free(original);
+		}
+		raop_rtp_start(conn->raop_rtp, use_udp, remote_cport, remote_tport, &cport, &tport, &dport);
 
 		memset(buffer, 0, sizeof(buffer));
 		if (use_udp) {
 			snprintf(buffer, sizeof(buffer)-1,
-			         "RTP/AVP/UDP;unicast;mode=record;timing_port=%u;events;control_port=%u;server_port=%u",
+			         "RTP/AVP/UDP;unicast;mode=record;timing_port=%hu;events;control_port=%hu;server_port=%hu",
 			         tport, cport, dport);
 		} else {
 			snprintf(buffer, sizeof(buffer)-1,
