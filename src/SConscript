@@ -22,8 +22,8 @@ else:
 # Compile the static library into lib directory and shared library
 # for the bindings
 if not libenv['STATIC_AND_SHARED_OBJECTS_ARE_THE_SAME']:
-        libenv.Library('airplay', libobj, install=False)
-libenv.SharedLibrary('airplay', shlibobj, install=False)
+        libenv.Library('shairplay', libobj, install=False)
+libenv.SharedLibrary('shairplay', shlibobj, install=False)
 
 # If we want to create universal binaries of the dynamic library on Mac, do it here
 if GetOption('universal'):
@@ -34,17 +34,17 @@ if GetOption('universal'):
 
         libenv32.Append(LINKFLAGS = ['-undefined', 'dynamic_lookup'])
         libenv32.Append(LINKFLAGS = ['-arch', 'i386'])
-        libenv32.Append(LINKFLAGS = ['-install_name', 'libairplay32.dylib'])
-        libenv32.SharedLibrary('airplay32', shlibobj, install=False)
+        libenv32.Append(LINKFLAGS = ['-install_name', 'libshairplay32.dylib'])
+        libenv32.SharedLibrary('shairplay32', shlibobj, install=False)
 
         libenv64.Append(LINKFLAGS = ['-undefined', 'dynamic_lookup'])
         libenv64.Append(LINKFLAGS = ['-arch', 'x86_64'])
-        libenv64.Append(LINKFLAGS = ['-install_name', 'libairplay64.dylib'])
-        libenv64.SharedLibrary('airplay64', shlibobj, install=False)
+        libenv64.Append(LINKFLAGS = ['-install_name', 'libshairplay64.dylib'])
+        libenv64.SharedLibrary('shairplay64', shlibobj, install=False)
 
         libenv.Append(LINKFLAGS = ['-undefined', 'dynamic_lookup'])
         libenv.Append(LINKFLAGS = ['-arch', 'i386', '-arch', 'x86_64'])
-        libenv.Append(LINKFLAGS = ['-install_name', 'libairplay.dylib'])
+        libenv.Append(LINKFLAGS = ['-install_name', 'libshairplay.dylib'])
 
 # Set up the environment for compiling the examples
 appenv = env.Clone()
@@ -52,7 +52,7 @@ conf = Configure(appenv)
 conf.CheckLib('pthread')
 appenv = conf.Finish()
 appenv.Append(LIBPATH = ['.'])
-appenv.Prepend(LIBS = ['airplay'])
+appenv.Prepend(LIBS = ['shairplay'])
 
 exampleobj = appenv.Object(['test/example.c'])
 appenv.Program('example', exampleobj, install=False)
