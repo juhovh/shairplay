@@ -50,6 +50,7 @@ if GetOption('universal'):
 appenv = env.Clone()
 conf = Configure(appenv)
 conf.CheckLib('pthread')
+conf.CheckLib('dns_sd')
 appenv = conf.Finish()
 appenv.Append(LIBPATH = ['.'])
 appenv.Prepend(LIBS = ['shairplay'])
