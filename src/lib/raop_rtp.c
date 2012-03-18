@@ -247,7 +247,7 @@ raop_rtp_thread_udp(void *arg)
 	assert(raop_rtp);
 
 	config = raop_buffer_get_config(raop_rtp->buffer);
-	raop_rtp->callbacks.audio_init(raop_rtp->callbacks.cls, &cb_data,
+	cb_data = raop_rtp->callbacks.audio_init(raop_rtp->callbacks.cls,
 	                               config->bitDepth,
 	                               config->numChannels,
 	                               config->sampleRate);
@@ -376,7 +376,7 @@ raop_rtp_thread_tcp(void *arg)
 	assert(raop_rtp);
 
 	config = raop_buffer_get_config(raop_rtp->buffer);
-	raop_rtp->callbacks.audio_init(raop_rtp->callbacks.cls, &cb_data,
+	cb_data = raop_rtp->callbacks.audio_init(raop_rtp->callbacks.cls,
 	                               config->bitDepth,
 	                               config->numChannels,
 	                               config->sampleRate);

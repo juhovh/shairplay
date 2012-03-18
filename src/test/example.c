@@ -9,10 +9,10 @@
 #include "dnssd.h"
 #include "raop.h"
 
-static void
-audio_init(void *cls, void **session, int bits, int channels, int samplerate)
+static void *
+audio_init(void *cls, int bits, int channels, int samplerate)
 {
-	*session = fopen("audio.pcm", "wb");
+	return fopen("audio.pcm", "wb");
 }
 
 static void
@@ -63,8 +63,8 @@ main(int argc, char *argv[])
 	raop = raop_init_from_keyfile(&raop_cbs, "airport.key");
 	raop_start(raop, &raop_port, hwaddr, sizeof(hwaddr));
 
-	dnssd = dnssd_init(hwaddr, sizeof(hwaddr), NULL);
-	dnssd_register_raop(dnssd, name, raop_port);
+	dnssd = dnssd_init(NULL);
+	dnssd_register_raop(dnssd, name, raop_port, hwaddr, sizeof(hwaddr));
 
 #ifndef WIN32
 	sleep(100);

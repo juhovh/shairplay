@@ -102,9 +102,6 @@ struct dnssd_s {
 	TXTRecordGetBytesPtr_t     TXTRecordGetBytesPtr;
 	TXTRecordDeallocate_t      TXTRecordDeallocate;
 
-	char hwaddr[MAX_HWADDR_LEN];
-	int hwaddrlen;
-
 	DNSServiceRef raopService;
 	DNSServiceRef airplayService;
 };
@@ -112,15 +109,11 @@ struct dnssd_s {
 
 
 dnssd_t *
-dnssd_init(const char *hwaddr, int hwaddrlen, int *error)
+dnssd_init(int *error)
 {
 	dnssd_t *dnssd;
 
 	if (error) *error = DNSSD_ERROR_NOERROR;
-	if (hwaddrlen > MAX_HWADDR_LEN) {
-		if (error) *error = DNSSD_ERROR_HWADDRLEN;
-		return NULL;
-	}
 
 	dnssd = calloc(1, sizeof(dnssd_t));
 	if (!dnssd) {
@@ -161,9 +154,6 @@ dnssd_init(const char *hwaddr, int hwaddrlen, int *error)
 	dnssd->TXTRecordDeallocate = &TXTRecordDeallocate;
 #endif
 
-	memcpy(dnssd->hwaddr, hwaddr, hwaddrlen);
-	dnssd->hwaddrlen = hwaddrlen;
-
 	return dnssd;
 }
 
@@ -179,13 +169,15 @@ dnssd_destroy(dnssd_t *dnssd)
 }
 
 int
-dnssd_register_raop(dnssd_t *dnssd, const char *name, unsigned short port)
+dnssd_register_raop(dnssd_t *dnssd, const char *name, unsigned short port, const char *hwaddr, int hwaddrlen)
 {
 	TXTRecordRef txtRecord;
 	char servname[MAX_SERVNAME];
 	int ret;
 
 	assert(dnssd);
+	assert(name);
+	assert(hwaddr);
 
 	dnssd->TXTRecordCreate(&txtRecord, 0, NULL);
 	dnssd->TXTRecordSetValue(&txtRecord, "txtvers", strlen(RAOP_TXTVERS), RAOP_TXTVERS);
@@ -205,7 +197,7 @@ dnssd_register_raop(dnssd_t *dnssd, const char *name, unsigned short port)
 	dnssd->TXTRecordSetValue(&txtRecord, "sf", strlen(RAOP_SF), RAOP_SF);
 
 	/* Convert hardware address to string */
-	ret = utils_hwaddr_raop(servname, sizeof(servname), dnssd->hwaddr, dnssd->hwaddrlen);
+	ret = utils_hwaddr_raop(servname, sizeof(servname), hwaddr, hwaddrlen);
 	if (ret < 0) {
 		/* FIXME: handle better */
 		return -1;
@@ -235,7 +227,7 @@ dnssd_register_raop(dnssd_t *dnssd, const char *name, unsigned short port)
 }
 
 int
-dnssd_register_airplay(dnssd_t *dnssd, const char *name, unsigned short port)
+dnssd_register_airplay(dnssd_t *dnssd, const char *name, unsigned short port, const char *hwaddr, int hwaddrlen)
 {
 	TXTRecordRef txtRecord;
 	char deviceid[3*MAX_HWADDR_LEN];
@@ -243,9 +235,11 @@ dnssd_register_airplay(dnssd_t *dnssd, const char *name, unsigned short port)
 	int ret;
 
 	assert(dnssd);
+	assert(name);
+	assert(hwaddr);
 
 	/* Convert hardware address to string */
-	ret = utils_hwaddr_airplay(deviceid, sizeof(deviceid), dnssd->hwaddr, dnssd->hwaddrlen);
+	ret = utils_hwaddr_airplay(deviceid, sizeof(deviceid), hwaddr, hwaddrlen);
 	if (ret < 0) {
 		/* FIXME: handle better */
 		return -1;

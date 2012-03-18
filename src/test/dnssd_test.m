@@ -13,13 +13,13 @@ main(int argc, char *argv[])
 	const char hwaddr[] = { 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB };
 	dnssd_t *dnssd;
 
-	dnssd = dnssd_init(hwaddr, sizeof(hwaddr), NULL);
+	dnssd = dnssd_init(NULL);
 	if (!dnssd) {
 		printf("Failed to init dnssd\n");
 		return -1;
 	}
-	dnssd_register_raop(dnssd, "Test", 5000);
-	dnssd_register_airplay(dnssd, "Test", 6000);
+	dnssd_register_raop(dnssd, "Test", 5000, hwaddr, sizeof(hwaddr));
+	dnssd_register_airplay(dnssd, "Test", 6000, hwaddr, sizeof(hwaddr));
 
 	sleepms(60000);
 

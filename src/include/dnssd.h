@@ -19,10 +19,10 @@ extern "C" {
 
 typedef struct dnssd_s dnssd_t;
 
-DNSSD_API dnssd_t *dnssd_init(const char *hwaddr, int hwaddrlen, int *error);
+DNSSD_API dnssd_t *dnssd_init(int *error);
 
-DNSSD_API int dnssd_register_raop(dnssd_t *dnssd, const char *name, unsigned short port);
-DNSSD_API int dnssd_register_airplay(dnssd_t *dnssd, const char *name, unsigned short port);
+DNSSD_API int dnssd_register_raop(dnssd_t *dnssd, const char *name, unsigned short port, const char *hwaddr, int hwaddrlen);
+DNSSD_API int dnssd_register_airplay(dnssd_t *dnssd, const char *name, unsigned short port, const char *hwaddr, int hwaddrlen);
 
 DNSSD_API void dnssd_unregister_raop(dnssd_t *dnssd);
 DNSSD_API void dnssd_unregister_airplay(dnssd_t *dnssd);
