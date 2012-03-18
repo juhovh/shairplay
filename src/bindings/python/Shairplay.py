@@ -1,3 +1,17 @@
+'''
+	Copyright (C) 2012  Juho Vähä-Herttua
+
+	This library is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 2.1 of the License, or (at your option) any later version.
+
+	This library is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
+'''
+
 import os
 import sys
 import platform
@@ -39,11 +53,11 @@ def LoadShairplay(path):
 
 	# Initialize dnssd related functions
 	libshairplay.dnssd_init.restype = c_void_p
-	libshairplay.dnssd_init.argtypes = [POINTER(c_char), c_int, POINTER(c_int)]
+	libshairplay.dnssd_init.argtypes = [POINTER(c_int)]
 	libshairplay.dnssd_register_raop.restype = c_int
-	libshairplay.dnssd_register_raop.argtypes = [c_void_p, c_char_p, c_ushort]
+	libshairplay.dnssd_register_raop.argtypes = [c_void_p, c_char_p, c_ushort, POINTER(c_char), c_int]
 	libshairplay.dnssd_register_airplay.restype = c_int
-	libshairplay.dnssd_register_airplay.argtypes = [c_void_p, c_char_p, c_ushort]
+	libshairplay.dnssd_register_airplay.argtypes = [c_void_p, c_char_p, c_ushort, POINTER(c_char), c_int]
 	libshairplay.dnssd_unregister_raop.restype = None
 	libshairplay.dnssd_unregister_raop.argtypes = [c_void_p]
 	libshairplay.dnssd_unregister_airplay.restype = None
@@ -168,10 +182,9 @@ class DnssdService:
 		self.libshairplay = libshairplay
 		self.instance = None
 
-		hwaddr = (c_char * 6)()
 		error = c_int(0)
 
-		self.instance = self.libshairplay.dnssd_init(hwaddr, c_int(len(hwaddr)), pointer(error))
+		self.instance = self.libshairplay.dnssd_init(pointer(error))
 		if self.instance == None:
 			raise RuntimeError("Initializing library failed: " + str(error.value))
 
@@ -180,14 +193,16 @@ class DnssdService:
 			self.libshairplay.dnssd_destroy(self.instance)
 		self.instance = None
 
-	def register_raop(self, name, port):
-		self.libshairplay.dnssd_register_raop(self.instance, name, c_ushort(port))
+	def register_raop(self, name, port, hwaddrstr):
+		hwaddr = create_string_buffer(hwaddrstr, len(hwaddrstr))
+		self.libshairplay.dnssd_register_raop(self.instance, name, c_ushort(port), hwaddr, len(hwaddr))
 
 	def unregister_raop(self):
 		self.libshairplay.dnssd_unregister_raop(self.instance)
 
-	def register_airplay(self, name, port):
-		self.libshairplay.dnssd_register_airplay(self.instance, name, c_ushort(port))
+	def register_airplay(self, name, port, hwaddrstr):
+		hwaddr = create_string_buffer(hwaddrstr, len(hwaddrstr))
+		self.libshairplay.dnssd_register_airplay(self.instance, name, c_ushort(port), hwaddr, len(hwaddr))
 
 	def unregister_airplay(self):
 		self.libshairplay.dnssd_unregister_airplay(self.instance)
