@@ -26,13 +26,13 @@ main(int argc, char *argv[])
 	}
 #endif
 
-	dnssd = dnssd_init(hwaddr, sizeof(hwaddr), NULL);
+	dnssd = dnssd_init(NULL);
 	if (!dnssd) {
 		printf("Failed to init dnssd\n");
 		return -1;
 	}
-	dnssd_register_raop(dnssd, "Test", 5000);
-	dnssd_register_airplay(dnssd, "Test", 6000);
+	dnssd_register_raop(dnssd, "Test", 5000, hwaddr, sizeof(hwaddr));
+	dnssd_register_airplay(dnssd, "Test", 6000, hwaddr, sizeof(hwaddr));
 
 	sleepms(60000);
 

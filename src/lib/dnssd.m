@@ -24,32 +24,22 @@
 #define MAX_SERVNAME 256
 
 struct dnssd_s {
-	char hwaddr[MAX_HWADDR_LEN];
-	int hwaddrlen;
-
 	NSNetService *raopService;
 	NSNetService *airplayService;
 };
 
 dnssd_t *
-dnssd_init(const char *hwaddr, int hwaddrlen, int *error)
+dnssd_init(int *error)
 {
 	dnssd_t *dnssd;
 
 	if (error) *error = DNSSD_ERROR_NOERROR;
-	if (hwaddrlen > MAX_HWADDR_LEN) {
-		if (error) *error = DNSSD_ERROR_HWADDRLEN;
-		return NULL;
-	}
 
 	dnssd = calloc(1, sizeof(dnssd_t));
 	if (!dnssd) {
 		if (error) *error = DNSSD_ERROR_OUTOFMEM;
 		return NULL;
 	}
-	memcpy(dnssd->hwaddr, hwaddr, hwaddrlen);
-	dnssd->hwaddrlen = hwaddrlen;
-
 	return dnssd;
 }
 
@@ -60,7 +50,7 @@ dnssd_destroy(dnssd_t *dnssd)
 }
 
 int
-dnssd_register_raop(dnssd_t *dnssd, const char *name, unsigned short port)
+dnssd_register_raop(dnssd_t *dnssd, const char *name, unsigned short port, const char *hwaddr, int hwaddrlen)
 {
 	char hwaddrstr[MAX_SERVNAME];
 	NSString *serviceString;
@@ -75,7 +65,7 @@ dnssd_register_raop(dnssd_t *dnssd, const char *name, unsigned short port)
 	}
 
 	/* Convert the hardware address to string */
-	ret = utils_hwaddr_raop(hwaddrstr, sizeof(hwaddrstr), dnssd->hwaddr, dnssd->hwaddrlen);
+	ret = utils_hwaddr_raop(hwaddrstr, sizeof(hwaddrstr), hwaddr, hwaddrlen);
 	if (ret < 0) {
 		return -2;
 	}
@@ -110,7 +100,7 @@ dnssd_register_raop(dnssd_t *dnssd, const char *name, unsigned short port)
 }
 
 int
-dnssd_register_airplay(dnssd_t *dnssd, const char *name, unsigned short port)
+dnssd_register_airplay(dnssd_t *dnssd, const char *name, unsigned short port, const char *hwaddr, int hwaddrlen)
 {
 	NSMutableDictionary *txtDict;
 	NSData *txtData;
@@ -125,7 +115,7 @@ dnssd_register_airplay(dnssd_t *dnssd, const char *name, unsigned short port)
 	}
 
 	/* Convert hardware address to string */
-	ret = utils_hwaddr_airplay(deviceid, sizeof(deviceid), dnssd->hwaddr, dnssd->hwaddrlen);
+	ret = utils_hwaddr_airplay(deviceid, sizeof(deviceid), hwaddr, hwaddrlen);
 	if (ret < 0) {
 		return -2;
 	}

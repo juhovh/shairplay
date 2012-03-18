@@ -15,7 +15,7 @@ typedef struct raop_s raop_t;
 
 struct raop_callbacks_s {
 	void* cls;
-	void  (*audio_init)(void *cls, void **session, int bits, int channels, int samplerate);
+	void* (*audio_init)(void *cls, int bits, int channels, int samplerate);
 	void  (*audio_set_volume)(void *cls, void *session, float volume);
 	void  (*audio_process)(void *cls, void *session, const void *buffer, int buflen);
 	void  (*audio_flush)(void *cls, void *session);
