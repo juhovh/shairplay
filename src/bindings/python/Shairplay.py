@@ -42,25 +42,7 @@ class RaopNativeCallbacks(Structure):
 	            ("audio_flush",       audio_flush_prototype),
 	            ("audio_destroy",     audio_destroy_prototype)]
 
-def LoadShairplay(path):
-	if sys.maxsize < 2**32:
-		libname = "shairplay32"
-	else:
-		libname = "shairplay64"
-
-	if platform.system() == "Windows":
-		libname = libname + ".dll"
-	elif platform.system() == "Darwin":
-		libname = "lib" + libname + ".dylib"
-	else:
-		libname = "lib" + libname + ".so"
-
-	try:
-		fullpath = os.path.join(path, libname)
-		libshairplay = cdll.LoadLibrary(fullpath)
-	except:
-		raise RuntimeError("Couldn't load shairplay library " + libname)
-
+def InitShairplay(libshairplay):
 	# Initialize dnssd related functions
 	libshairplay.dnssd_init.restype = c_void_p
 	libshairplay.dnssd_init.argtypes = [POINTER(c_int)]
@@ -85,6 +67,26 @@ def LoadShairplay(path):
 	libshairplay.raop_destroy.restype = None
 	libshairplay.raop_destroy.argtypes = [c_void_p]
 
+def LoadShairplay(path):
+	if sys.maxsize < 2**32:
+		libname = "shairplay32"
+	else:
+		libname = "shairplay64"
+
+	if platform.system() == "Windows":
+		libname = libname + ".dll"
+	elif platform.system() == "Darwin":
+		libname = "lib" + libname + ".dylib"
+	else:
+		libname = "lib" + libname + ".so"
+
+	try:
+		fullpath = os.path.join(path, libname)
+		libshairplay = cdll.LoadLibrary(fullpath)
+	except:
+		raise RuntimeError("Couldn't load shairplay library " + libname)
+
+	InitShairplay(libshairplay)
 	return libshairplay
 
 RSA_KEY = """
