@@ -1,3 +1,4 @@
+# coding=utf-8
 '''
 	Copyright (C) 2012  Juho Vähä-Herttua
 
@@ -122,7 +123,8 @@ class RaopCallbacks:
 class RaopService:
 	def audio_init_cb(self, cls, bits, channels, samplerate):
 		session = self.callbacks.audio_init(bits, channels, samplerate)
-		return py_object(session)
+		self.sessions.append(session)
+		return session
 
 	def audio_set_volume_cb(self, cls, sessionptr, volume):
 		session = cast(sessionptr, py_object).value
@@ -140,11 +142,14 @@ class RaopService:
 	def audio_destroy_cb(self, cls, sessionptr):
 		session = cast(sessionptr, py_object).value
 		self.callbacks.audio_destroy(session)
+		if session in self.sessions:
+			self.sessions.remove(session)
 
 
 	def __init__(self, libshairplay, callbacks):
 		self.libshairplay = libshairplay
 		self.callbacks = callbacks
+		self.sessions = []
 		self.instance = None
 
 		# We need to hold a reference to native_callbacks
