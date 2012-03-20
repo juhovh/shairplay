@@ -47,7 +47,7 @@ def InitShairplay(libshairplay):
 	libshairplay.dnssd_init.restype = c_void_p
 	libshairplay.dnssd_init.argtypes = [POINTER(c_int)]
 	libshairplay.dnssd_register_raop.restype = c_int
-	libshairplay.dnssd_register_raop.argtypes = [c_void_p, c_char_p, c_ushort, POINTER(c_char), c_int]
+	libshairplay.dnssd_register_raop.argtypes = [c_void_p, c_char_p, c_ushort, POINTER(c_char), c_int, c_int]
 	libshairplay.dnssd_register_airplay.restype = c_int
 	libshairplay.dnssd_register_airplay.argtypes = [c_void_p, c_char_p, c_ushort, POINTER(c_char), c_int]
 	libshairplay.dnssd_unregister_raop.restype = None
@@ -61,7 +61,7 @@ def InitShairplay(libshairplay):
 	libshairplay.raop_init.restype = c_void_p
 	libshairplay.raop_init.argtypes = [POINTER(RaopNativeCallbacks), c_char_p]
 	libshairplay.raop_start.restype = c_int
-	libshairplay.raop_start.argtypes = [c_void_p, POINTER(c_ushort), POINTER(c_char), c_int]
+	libshairplay.raop_start.argtypes = [c_void_p, POINTER(c_ushort), POINTER(c_char), c_int, c_char_p]
 	libshairplay.raop_stop.restype = None
 	libshairplay.raop_stop.argtypes = [c_void_p]
 	libshairplay.raop_destroy.restype = None
@@ -181,11 +181,11 @@ class RaopService:
 			self.libshairplay.raop_destroy(self.instance)
 		self.instance = None
 
-	def start(self, port, hwaddrstr):
+	def start(self, port, hwaddrstr, password=None):
 		port = c_ushort(port)
 		hwaddr = create_string_buffer(hwaddrstr, len(hwaddrstr))
 
-		ret = self.libshairplay.raop_start(self.instance, pointer(port), hwaddr, c_int(len(hwaddr)))
+		ret = self.libshairplay.raop_start(self.instance, pointer(port), hwaddr, c_int(len(hwaddr)), password)
 		if ret < 0:
 			raise RuntimeError("Starting RAOP instance failed")
 		return port.value
@@ -209,9 +209,12 @@ class DnssdService:
 			self.libshairplay.dnssd_destroy(self.instance)
 		self.instance = None
 
-	def register_raop(self, name, port, hwaddrstr):
+	def register_raop(self, name, port, hwaddrstr, password=False):
 		hwaddr = create_string_buffer(hwaddrstr, len(hwaddrstr))
-		self.libshairplay.dnssd_register_raop(self.instance, name, c_ushort(port), hwaddr, len(hwaddr))
+		use_pw = c_int(0)
+		if password:
+			use_pw = c_int(1)
+		self.libshairplay.dnssd_register_raop(self.instance, name, c_ushort(port), hwaddr, len(hwaddr), use_pw)
 
 	def unregister_raop(self):
 		self.libshairplay.dnssd_unregister_raop(self.instance)

@@ -48,6 +48,7 @@ SOURCES += main.cpp\
     ../src/lib/crypto/bigint.c \
     ../src/lib/crypto/aes.c \
     ../src/lib/logger.c \
+    ../src/lib/digest.c \
     audiooutput.cpp \
     raopservice.cpp \
     mainapplication.cpp \
@@ -63,42 +64,4 @@ FORMS    += mainwindow.ui
 
 RESOURCES += \
     AirTV.qrc
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

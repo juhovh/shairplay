@@ -439,17 +439,20 @@ raop_start(raop_t *raop, unsigned short *port, const char *hwaddr, int hwaddrlen
 		return -1;
 	}
 
-	/* Validate password */
-	if (strlen(password) > MAX_PASSWORD_LEN) {
-		return -1;
+	memset(raop->password, 0, sizeof(raop->password));
+	if (password) {
+		/* Validate password */
+		if (strlen(password) > MAX_PASSWORD_LEN) {
+			return -1;
+		}
+
+		/* Copy password to the raop structure */
+		strncpy(raop->password, password, MAX_PASSWORD_LEN);
 	}
 
 	/* Copy hwaddr to the raop structure */
 	memcpy(raop->hwaddr, hwaddr, hwaddrlen);
 	raop->hwaddrlen = hwaddrlen;
-
-	/* Copy password to the raop structure */
-	strncpy(raop->password, password, MAX_PASSWORD_LEN);
 
 	return httpd_start(raop->httpd, port);
 }
