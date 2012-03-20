@@ -355,7 +355,7 @@ raop_rtp_thread_udp(void *arg)
 			}
 		}
 	}
-	logger_log(raop_rtp->logger, LOGGER_INFO, "Exiting thread\n");
+	logger_log(raop_rtp->logger, LOGGER_INFO, "Exiting UDP RAOP thread\n");
 	raop_rtp->callbacks.audio_destroy(raop_rtp->callbacks.cls, cb_data);
 
 	return 0;
@@ -493,7 +493,7 @@ raop_rtp_thread_tcp(void *arg)
 		closesocket(stream_fd);
 	}
 
-	logger_log(raop_rtp->logger, LOGGER_INFO, "Exiting thread\n");
+	logger_log(raop_rtp->logger, LOGGER_INFO, "Exiting TCP RAOP thread\n");
 	raop_rtp->callbacks.audio_destroy(raop_rtp->callbacks.cls, cb_data);
 
 	return 0;
