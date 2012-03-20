@@ -26,7 +26,7 @@ typedef struct raop_callbacks_s raop_callbacks_t;
 RAOP_API raop_t *raop_init(raop_callbacks_t *callbacks, const char *pemkey);
 RAOP_API raop_t *raop_init_from_keyfile(raop_callbacks_t *callbacks, const char *keyfile);
 
-RAOP_API int raop_start(raop_t *raop, unsigned short *port, const char *hwaddr, int hwaddrlen);
+RAOP_API int raop_start(raop_t *raop, unsigned short *port, const char *hwaddr, int hwaddrlen, const char *password);
 RAOP_API void raop_stop(raop_t *raop);
 
 RAOP_API void raop_destroy(raop_t *raop);

@@ -169,7 +169,7 @@ dnssd_destroy(dnssd_t *dnssd)
 }
 
 int
-dnssd_register_raop(dnssd_t *dnssd, const char *name, unsigned short port, const char *hwaddr, int hwaddrlen)
+dnssd_register_raop(dnssd_t *dnssd, const char *name, unsigned short port, const char *hwaddr, int hwaddrlen, int password)
 {
 	TXTRecordRef txtRecord;
 	char servname[MAX_SERVNAME];
@@ -188,7 +188,11 @@ dnssd_register_raop(dnssd_t *dnssd, const char *name, unsigned short port, const
 	dnssd->TXTRecordSetValue(&txtRecord, "da", strlen(RAOP_DA), RAOP_DA);
 	dnssd->TXTRecordSetValue(&txtRecord, "sr", strlen(RAOP_SR), RAOP_SR);
 	dnssd->TXTRecordSetValue(&txtRecord, "ss", strlen(RAOP_SS), RAOP_SS);
-	dnssd->TXTRecordSetValue(&txtRecord, "pw", strlen(RAOP_PW), RAOP_PW);
+	if (password) {
+		dnssd->TXTRecordSetValue(&txtRecord, "pw", strlen("true"), "true");
+	} else {
+		dnssd->TXTRecordSetValue(&txtRecord, "pw", strlen("false"), "false");
+	}
 	dnssd->TXTRecordSetValue(&txtRecord, "vn", strlen(RAOP_VN), RAOP_VN);
 	dnssd->TXTRecordSetValue(&txtRecord, "tp", strlen(RAOP_TP), RAOP_TP);
 	dnssd->TXTRecordSetValue(&txtRecord, "md", strlen(RAOP_MD), RAOP_MD);
