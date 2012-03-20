@@ -175,7 +175,7 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 	http_response_add_header(res, "Apple-Jack-Status", "connected; type=analog");
 
 	challenge = http_request_get_header(request, "Apple-Challenge");
-	if (challenge) {
+	if (!require_auth && challenge) {
 		char signature[MAX_SIGNATURE_LEN];
 
 		memset(signature, 0, sizeof(signature));
