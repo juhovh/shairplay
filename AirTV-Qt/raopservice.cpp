@@ -17,14 +17,16 @@
 #include <QDebug>
 #include <QFile>
 
-static void
-audio_init(void *cls, void **session, int bits, int channels, int samplerate)
+static void*
+audio_init(void *cls, int bits, int channels, int samplerate)
 {
+    void *session;
     QMetaObject::invokeMethod((QObject*)cls, "audioInit", Qt::BlockingQueuedConnection,
-                              Q_ARG(void*, (void*)session),
+                              Q_ARG(void*, (void*)&session),
                               Q_ARG(int, bits),
                               Q_ARG(int, channels),
                               Q_ARG(int, samplerate));
+    return session;
 }
 
 static void
@@ -79,8 +81,6 @@ RaopService::~RaopService()
 
 bool RaopService::init()
 {
-    const char hwaddr[] = { 0x48, 0x5d, 0x60, 0x7c, 0xee, 0x22 };
-
     raop_callbacks_t raop_cbs;
     int error;
 
@@ -112,7 +112,7 @@ bool RaopService::init()
         return false;
     }
 
-    m_dnssd = dnssd_init(hwaddr, sizeof(hwaddr), &error);
+    m_dnssd = dnssd_init(&error);
     if (!m_dnssd) {
         raop_destroy(m_raop);
         m_raop = NULL;
@@ -136,7 +136,7 @@ bool RaopService::start(const QString & name, quint16 port)
         m_thread.wait();
         return false;
     }
-    if (dnssd_register_raop(m_dnssd, name.toUtf8(), port) < 0) {
+    if (dnssd_register_raop(m_dnssd, name.toUtf8(), port, hwaddr, sizeof(hwaddr)) < 0) {
         raop_stop(m_raop);
         m_thread.quit();
         m_thread.wait();
