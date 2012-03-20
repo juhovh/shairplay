@@ -61,10 +61,10 @@ main(int argc, char *argv[])
 	raop_cbs.audio_destroy = audio_destroy;
 
 	raop = raop_init_from_keyfile(&raop_cbs, "airport.key");
-	raop_start(raop, &raop_port, hwaddr, sizeof(hwaddr));
+	raop_start(raop, &raop_port, hwaddr, sizeof(hwaddr), "test");
 
 	dnssd = dnssd_init(NULL);
-	dnssd_register_raop(dnssd, name, raop_port, hwaddr, sizeof(hwaddr));
+	dnssd_register_raop(dnssd, name, raop_port, hwaddr, sizeof(hwaddr), 1);
 
 #ifndef WIN32
 	sleep(100);

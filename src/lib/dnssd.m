@@ -50,7 +50,7 @@ dnssd_destroy(dnssd_t *dnssd)
 }
 
 int
-dnssd_register_raop(dnssd_t *dnssd, const char *name, unsigned short port, const char *hwaddr, int hwaddrlen)
+dnssd_register_raop(dnssd_t *dnssd, const char *name, unsigned short port, const char *hwaddr, int hwaddrlen, int password)
 {
 	char hwaddrstr[MAX_SERVNAME];
 	NSString *serviceString;
@@ -80,7 +80,11 @@ dnssd_register_raop(dnssd_t *dnssd, const char *name, unsigned short port, const
 	[txtDict setValue:[NSString stringWithUTF8String:RAOP_DA] forKey:@"da"];
 	[txtDict setValue:[NSString stringWithUTF8String:RAOP_SR] forKey:@"sr"];
 	[txtDict setValue:[NSString stringWithUTF8String:RAOP_SS] forKey:@"ss"];
-	[txtDict setValue:[NSString stringWithUTF8String:RAOP_PW] forKey:@"pw"];
+	if (password) {
+		[txtDict setValue:@"true" forKey:@"pw"];
+	} else {
+		[txtDict setValue:@"false" forKey:@"pw"];
+	}
 	[txtDict setValue:[NSString stringWithUTF8String:RAOP_VN] forKey:@"vn"];
 	[txtDict setValue:[NSString stringWithUTF8String:RAOP_TP] forKey:@"tp"];
 	[txtDict setValue:[NSString stringWithUTF8String:RAOP_MD] forKey:@"md"];

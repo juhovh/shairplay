@@ -20,6 +20,7 @@
 #include "raop.h"
 #include "raop_rtp.h"
 #include "rsakey.h"
+#include "digest.h"
 #include "httpd.h"
 #include "sdp.h"
 
@@ -30,6 +31,12 @@
 
 /* Actually 345 bytes for 2048-bit key */
 #define MAX_SIGNATURE_LEN 512
+
+/* Let's just decide on some length */
+#define MAX_PASSWORD_LEN 64
+
+/* MD5 as hex fits here */
+#define MAX_NONCE_LEN 33
 
 struct raop_s {
 	/* Callbacks for audio */
@@ -45,6 +52,9 @@ struct raop_s {
 	/* Hardware address information */
 	unsigned char hwaddr[MAX_HWADDR_LEN];
 	int hwaddrlen;
+
+	/* Password information */
+	char password[MAX_PASSWORD_LEN+1];
 };
 
 struct raop_conn_s {
@@ -56,6 +66,8 @@ struct raop_conn_s {
 
 	unsigned char *remote;
 	int remotelen;
+
+	char nonce[MAX_NONCE_LEN+1];
 };
 typedef struct raop_conn_s raop_conn_t;
 
@@ -102,6 +114,8 @@ conn_init(void *opaque, unsigned char *local, int locallen, unsigned char *remot
 
 	conn->locallen = locallen;
 	conn->remotelen = remotelen;
+
+	digest_generate_nonce(conn->nonce, sizeof(conn->nonce));
 	return conn;
 }
 
@@ -115,6 +129,7 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 	const char *method;
 	const char *cseq;
 	const char *challenge;
+	int require_auth = 0;
 
 	method = http_request_get_method(request);
 	cseq = http_request_get_header(request, "CSeq");
@@ -123,6 +138,38 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 	}
 
 	res = http_response_init("RTSP/1.0", 200, "OK");
+	if (strlen(raop->password)) {
+		const char *authorization;
+
+		authorization = http_request_get_header(request, "Authorization");
+		if (authorization) {
+			logger_log(&conn->raop->logger, LOGGER_DEBUG, "Authorization: %s\n", authorization);
+		}
+		if (!digest_is_valid("AppleTV", raop->password, conn->nonce, method, authorization)) {
+			char *authstr;
+			int authstrlen;
+
+			/* Allocate the authenticate string */
+			authstrlen = sizeof("Digest realm=\"AppleTV\", nonce=\"\"") + sizeof(conn->nonce) + 1;
+			authstr = malloc(authstrlen);
+
+			/* Concatenate the authenticate string */
+			memset(authstr, 0, authstrlen);
+			strcat(authstr, "Digest realm=\"AppleTV\", nonce=\"");
+			strcat(authstr, conn->nonce);
+			strcat(authstr, "\"");
+
+			/* Construct a new response */
+			require_auth = 1;
+			http_response_destroy(res);
+			res = http_response_init("RTSP/1.0", 401, "Unauthorized");
+			http_response_add_header(res, "WWW-Authenticate", authstr);
+			free(authstr);
+		} else {
+			logger_log(&conn->raop->logger, LOGGER_DEBUG, "AUTHENTICATION SUCCESS!\n");
+		}
+	}
+
 	http_response_add_header(res, "CSeq", cseq);
 	http_response_add_header(res, "Apple-Jack-Status", "connected; type=analog");
 
@@ -138,7 +185,10 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 		logger_log(&conn->raop->logger, LOGGER_DEBUG, "Got challenge: %s\n", challenge);
 		logger_log(&conn->raop->logger, LOGGER_DEBUG, "Got response: %s\n", signature);
 	}
-	if (!strcmp(method, "OPTIONS")) {
+
+	if (require_auth) {
+		/* Do nothing in case of authentication request */
+	} else if (!strcmp(method, "OPTIONS")) {
 		http_response_add_header(res, "Public", "ANNOUNCE, SETUP, RECORD, PAUSE, FLUSH, TEARDOWN, OPTIONS, GET_PARAMETER, SET_PARAMETER");
 	} else if (!strcmp(method, "ANNOUNCE")) {
 		const char *data;
@@ -378,7 +428,7 @@ raop_destroy(raop_t *raop)
 }
 
 int
-raop_start(raop_t *raop, unsigned short *port, const char *hwaddr, int hwaddrlen)
+raop_start(raop_t *raop, unsigned short *port, const char *hwaddr, int hwaddrlen, const char *password)
 {
 	assert(raop);
 	assert(port);
@@ -389,9 +439,17 @@ raop_start(raop_t *raop, unsigned short *port, const char *hwaddr, int hwaddrlen
 		return -1;
 	}
 
+	/* Validate password */
+	if (strlen(password) > MAX_PASSWORD_LEN) {
+		return -1;
+	}
+
 	/* Copy hwaddr to the raop structure */
 	memcpy(raop->hwaddr, hwaddr, hwaddrlen);
 	raop->hwaddrlen = hwaddrlen;
+
+	/* Copy password to the raop structure */
+	strncpy(raop->password, password, MAX_PASSWORD_LEN);
 
 	return httpd_start(raop->httpd, port);
 }
