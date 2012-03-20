@@ -131,12 +131,12 @@ bool RaopService::start(const QString & name, quint16 port)
     }
 
     m_thread.start();
-    if (raop_start(m_raop, &port, hwaddr, sizeof(hwaddr)) < 0) {
+    if (raop_start(m_raop, &port, hwaddr, sizeof(hwaddr), NULL) < 0) {
         m_thread.quit();
         m_thread.wait();
         return false;
     }
-    if (dnssd_register_raop(m_dnssd, name.toUtf8(), port, hwaddr, sizeof(hwaddr)) < 0) {
+    if (dnssd_register_raop(m_dnssd, name.toUtf8(), port, hwaddr, sizeof(hwaddr), 0) < 0) {
         raop_stop(m_raop);
         m_thread.quit();
         m_thread.wait();
