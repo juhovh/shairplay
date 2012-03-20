@@ -36,7 +36,7 @@
 #define MAX_PASSWORD_LEN 64
 
 /* MD5 as hex fits here */
-#define MAX_NONCE_LEN 33
+#define MAX_NONCE_LEN 32
 
 struct raop_s {
 	/* Callbacks for audio */
@@ -143,9 +143,10 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 
 		authorization = http_request_get_header(request, "Authorization");
 		if (authorization) {
+			logger_log(&conn->raop->logger, LOGGER_DEBUG, "Our nonce: %s\n", conn->nonce);
 			logger_log(&conn->raop->logger, LOGGER_DEBUG, "Authorization: %s\n", authorization);
 		}
-		if (!digest_is_valid("AppleTV", raop->password, conn->nonce, method, authorization)) {
+		if (!digest_is_valid("AppleTV", raop->password, conn->nonce, method, http_request_get_url(request), authorization)) {
 			char *authstr;
 			int authstrlen;
 

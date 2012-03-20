@@ -73,14 +73,14 @@ digest_generate_nonce(char *result, int resultlen)
 	MD5_Final(md5buf, &md5ctx);
 	digest_md5_to_hex(md5buf, md5hex);
 
+	memset(result, 0, resultlen);
 	strncpy(result, md5hex, resultlen-1);
-	result[resultlen-1] = '\0';
 }
 
 int
 digest_is_valid(const char *our_realm, const char *password,
                 const char *our_nonce, const char *method,
-                const char *authorization)
+                const char *our_uri, const char *authorization)
 {
 	char *auth;
 	char *current;
@@ -138,6 +138,13 @@ digest_is_valid(const char *our_realm, const char *password,
 			uri = first+5;
 		if (!strncmp("response=\"", first, 10))
 			response = first+10;
+	}
+
+	if (!username || !realm || !nonce || !uri || !response) {
+		return 0;
+	}
+	if (strcmp(realm, our_realm) || strcmp(nonce, our_nonce) || strcmp(uri, our_uri)) {
+		return 0;
 	}
 
 	/* Calculate our response */
