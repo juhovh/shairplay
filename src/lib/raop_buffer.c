@@ -211,8 +211,8 @@ void
 raop_buffer_destroy(raop_buffer_t *raop_buffer)
 {
 	if (raop_buffer) {
+		destroy_alac(raop_buffer->alac);
 		free(raop_buffer->buffer);
-		free(raop_buffer->alac);
 		free(raop_buffer);
 	}
 }
