@@ -289,10 +289,11 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 			memcpy(datastr, data, datalen);
 			if (!strncmp(datastr, "volume: ", 8)) {
 				float vol = 0.0;
-				sscanf(data+8, "%f", &vol);
+				sscanf(datastr+8, "%f", &vol);
 				raop_rtp_set_volume(conn->raop_rtp, vol);
 			}
 		}
+		free(datastr);
 	} else if (!strcmp(method, "FLUSH")) {
 		const char *rtpinfo;
 		int next_seq = -1;
