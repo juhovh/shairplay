@@ -72,20 +72,21 @@ static int
 get_fmtp_info(ALACSpecificConfig *config, const char *fmtp)
 {
 	int intarr[12];
+	char *original;
 	char *strptr;
 	int i;
 
 	/* Parse fmtp string to integers */
-	strptr = strdup(fmtp);
+	original = strptr = strdup(fmtp);
 	for (i=0; i<12; i++) {
 		if (strptr == NULL) {
-			free(strptr);
+			free(original);
 			return -1;
 		}
 		intarr[i] = atoi(utils_strsep(&strptr, " "));
 	}
-	free(strptr);
-	strptr = NULL;
+	free(original);
+	original = strptr = NULL;
 
 	/* Fill the config struct */
 	config->frameLength = intarr[1];
