@@ -60,6 +60,8 @@ def InitShairplay(libshairplay):
 	# Initialize raop related functions
 	libshairplay.raop_init.restype = c_void_p
 	libshairplay.raop_init.argtypes = [POINTER(RaopNativeCallbacks), c_char_p]
+	libshairplay.raop_is_running.restype = c_int
+	libshairplay.raop_is_running.argtypes = [c_void_p]
 	libshairplay.raop_start.restype = c_int
 	libshairplay.raop_start.argtypes = [c_void_p, POINTER(c_ushort), POINTER(c_char), c_int, c_char_p]
 	libshairplay.raop_stop.restype = None
@@ -180,6 +182,12 @@ class RaopService:
 		if self.instance != None:
 			self.libshairplay.raop_destroy(self.instance)
 		self.instance = None
+
+	def is_running(self):
+		if self.libshairplay.raop_is_running(self.instance):
+			return True
+		else:
+			return False
 
 	def start(self, port, hwaddrstr, password=None):
 		port = c_ushort(port)
