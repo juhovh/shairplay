@@ -336,6 +336,20 @@ httpd_start(httpd_t *httpd, unsigned short *port)
 	return 1;
 }
 
+int
+httpd_is_running(httpd_t *httpd)
+{
+	int running;
+
+	assert(httpd);
+
+	MUTEX_LOCK(httpd->run_mutex);
+	running = httpd->running || !httpd->joined;
+	MUTEX_UNLOCK(httpd->run_mutex);
+
+	return running;
+}
+
 void
 httpd_stop(httpd_t *httpd)
 {

@@ -32,6 +32,8 @@ typedef struct httpd_callbacks_s httpd_callbacks_t;
 
 httpd_t *httpd_init(logger_t *logger, httpd_callbacks_t *callbacks, int max_connections, int use_rtsp);
 
+int httpd_is_running(httpd_t *httpd);
+
 int httpd_start(httpd_t *httpd, unsigned short *port);
 void httpd_stop(httpd_t *httpd);
 
