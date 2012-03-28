@@ -430,6 +430,14 @@ raop_destroy(raop_t *raop)
 }
 
 int
+raop_is_running(raop_t *raop)
+{
+	assert(raop);
+
+	return httpd_is_running(raop->httpd);
+}
+
+int
 raop_start(raop_t *raop, unsigned short *port, const char *hwaddr, int hwaddrlen, const char *password)
 {
 	assert(raop);
