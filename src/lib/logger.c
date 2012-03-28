@@ -25,7 +25,7 @@ logger_init(logger_t *logger)
 {
 	assert(logger);
 
-	logger->level = LOGGER_INFO;
+	logger->level = LOGGER_DEBUG;
 	logger->callback = NULL;
 }
 
@@ -95,10 +95,10 @@ logger_log(logger_t *logger, int level, const char *fmt, ...)
 		char *local = logger_utf8_to_local(buffer);
 
 		if (local) {
-			fprintf(stderr, "%s", local);
+			fprintf(stderr, "%s\n", local);
 			free(local);
 		} else {
-			fprintf(stderr, "%s", buffer);
+			fprintf(stderr, "%s\n", buffer);
 		}
 	}
 }

@@ -110,7 +110,7 @@ httpd_add_connection(httpd_t *httpd, int fd, unsigned char *local, int local_len
 		}
 	}
 	if (i == httpd->max_connections) {
-		logger_log(httpd->logger, LOGGER_INFO, "Max connections reached\n");
+		logger_log(httpd->logger, LOGGER_INFO, "Max connections reached");
 		shutdown(fd, SHUT_RDWR);
 		closesocket(fd);
 		return;
@@ -186,7 +186,7 @@ httpd_thread(void *arg)
 			continue;
 		} else if (ret == -1) {
 			/* FIXME: Error happened */
-			logger_log(httpd->logger, LOGGER_INFO, "Error in select\n");
+			logger_log(httpd->logger, LOGGER_INFO, "Error in select");
 			break;
 		}
 
@@ -213,7 +213,7 @@ httpd_thread(void *arg)
 				continue;
 			}
 
-			logger_log(httpd->logger, LOGGER_INFO, "Accepted client on socket %d\n", fd);
+			logger_log(httpd->logger, LOGGER_INFO, "Accepted client on socket %d", fd);
 			local = netutils_get_address(&local_saddr, &local_len);
 			remote = netutils_get_address(&remote_saddr, &remote_len);
 
@@ -235,10 +235,10 @@ httpd_thread(void *arg)
 				assert(connection->request);
 			}
 
-			logger_log(httpd->logger, LOGGER_DEBUG, "Receiving on socket %d\n", connection->socket_fd);
+			logger_log(httpd->logger, LOGGER_DEBUG, "Receiving on socket %d", connection->socket_fd);
 			ret = recv(connection->socket_fd, buffer, sizeof(buffer), 0);
 			if (ret == 0) {
-				logger_log(httpd->logger, LOGGER_INFO, "Connection closed for socket %d\n", connection->socket_fd);
+				logger_log(httpd->logger, LOGGER_INFO, "Connection closed for socket %d", connection->socket_fd);
 				httpd_remove_connection(httpd, connection);
 				continue;
 			}
@@ -246,7 +246,7 @@ httpd_thread(void *arg)
 			/* Parse HTTP request from data read from connection */
 			http_request_add_data(connection->request, buffer, ret);
 			if (http_request_has_error(connection->request)) {
-				logger_log(httpd->logger, LOGGER_INFO, "Error in parsing: %s\n", http_request_get_error_name(connection->request));
+				logger_log(httpd->logger, LOGGER_INFO, "Error in parsing: %s", http_request_get_error_name(connection->request));
 				httpd_remove_connection(httpd, connection);
 				continue;
 			}
@@ -273,13 +273,13 @@ httpd_thread(void *arg)
 						ret = send(connection->socket_fd, data+written, datalen-written, 0);
 						if (ret == -1) {
 							/* FIXME: Error happened */
-							logger_log(httpd->logger, LOGGER_INFO, "Error in sending data\n");
+							logger_log(httpd->logger, LOGGER_INFO, "Error in sending data");
 							break;
 						}
 						written += ret;
 					}
 				} else {
-					logger_log(httpd->logger, LOGGER_INFO, "Didn't get response\n");
+					logger_log(httpd->logger, LOGGER_INFO, "Didn't get response");
 				}
 				http_response_destroy(response);
 			}
@@ -293,11 +293,11 @@ httpd_thread(void *arg)
 		if (!connection->connected) {
 			continue;
 		}
-		logger_log(httpd->logger, LOGGER_INFO, "Removing connection for socket %d\n", connection->socket_fd);
+		logger_log(httpd->logger, LOGGER_INFO, "Removing connection for socket %d", connection->socket_fd);
 		httpd_remove_connection(httpd, connection);
 	}
 
-	logger_log(httpd->logger, LOGGER_INFO, "Exiting HTTP thread\n");
+	logger_log(httpd->logger, LOGGER_INFO, "Exiting HTTP thread");
 
 	return 0;
 }
@@ -316,16 +316,16 @@ httpd_start(httpd_t *httpd, unsigned short *port)
 
 	httpd->server_fd = netutils_init_socket(port, 1, 0);
 	if (httpd->server_fd == -1) {
-		logger_log(httpd->logger, LOGGER_INFO, "Error initialising socket %d\n", SOCKET_GET_ERROR());
+		logger_log(httpd->logger, LOGGER_INFO, "Error initialising socket %d", SOCKET_GET_ERROR());
 		MUTEX_UNLOCK(httpd->run_mutex);
 		return -1;
 	}
 	if (listen(httpd->server_fd, 5) == -1) {
-		logger_log(httpd->logger, LOGGER_INFO, "Error listening to socket\n");
+		logger_log(httpd->logger, LOGGER_INFO, "Error listening to socket");
 		MUTEX_UNLOCK(httpd->run_mutex);
 		return -2;
 	}
-	logger_log(httpd->logger, LOGGER_INFO, "Initialized server socket\n");
+	logger_log(httpd->logger, LOGGER_INFO, "Initialized server socket");
 
 	/* Set values correctly and create new thread */
 	httpd->running = 1;

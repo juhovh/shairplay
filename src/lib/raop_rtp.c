@@ -210,7 +210,7 @@ raop_rtp_resend_callback(void *opaque, unsigned short seqnum, unsigned short cou
 	addr = (struct sockaddr *)&raop_rtp->control_saddr;
 	addrlen = raop_rtp->control_saddr_len;
 
-	logger_log(raop_rtp->logger, LOGGER_DEBUG, "Got resend request %d %d\n", seqnum, count);
+	logger_log(raop_rtp->logger, LOGGER_DEBUG, "Got resend request %d %d", seqnum, count);
 	ourseqnum = raop_rtp->control_seqnum++;
 
 	/* Fill the request buffer */
@@ -225,7 +225,7 @@ raop_rtp_resend_callback(void *opaque, unsigned short seqnum, unsigned short cou
 
 	ret = sendto(raop_rtp->csock, (const char *)packet, sizeof(packet), 0, addr, addrlen);
 	if (ret == -1) {
-		logger_log(raop_rtp->logger, LOGGER_WARNING, "Resend failed: %d\n", SOCKET_GET_ERROR());
+		logger_log(raop_rtp->logger, LOGGER_WARNING, "Resend failed: %d", SOCKET_GET_ERROR());
 	}
 
 	return 0;
@@ -320,7 +320,7 @@ raop_rtp_thread_udp(void *arg)
 			if (packetlen >= 12) {
 				char type = packet[1] & ~0x80;
 
-				logger_log(raop_rtp->logger, LOGGER_DEBUG, "Got control packet of type 0x%02x\n", type);
+				logger_log(raop_rtp->logger, LOGGER_DEBUG, "Got control packet of type 0x%02x", type);
 				if (type == 0x56) {
 					/* Handle resent data packet */
 					int ret = raop_buffer_queue(raop_rtp->buffer, packet+4, packetlen-4, 1);
@@ -328,7 +328,7 @@ raop_rtp_thread_udp(void *arg)
 				}
 			}
 		} else if (FD_ISSET(raop_rtp->tsock, &rfds)) {
-			logger_log(raop_rtp->logger, LOGGER_INFO, "Would have timing packet in queue\n");
+			logger_log(raop_rtp->logger, LOGGER_INFO, "Would have timing packet in queue");
 		} else if (FD_ISSET(raop_rtp->dsock, &rfds)) {
 			saddrlen = sizeof(saddr);
 			packetlen = recvfrom(raop_rtp->dsock, (char *)packet, sizeof(packet), 0,
@@ -355,7 +355,7 @@ raop_rtp_thread_udp(void *arg)
 			}
 		}
 	}
-	logger_log(raop_rtp->logger, LOGGER_INFO, "Exiting UDP RAOP thread\n");
+	logger_log(raop_rtp->logger, LOGGER_INFO, "Exiting UDP RAOP thread");
 	raop_rtp->callbacks.audio_destroy(raop_rtp->callbacks.cls, cb_data);
 
 	return 0;
@@ -421,19 +421,19 @@ raop_rtp_thread_tcp(void *arg)
 			continue;
 		} else if (ret == -1) {
 			/* FIXME: Error happened */
-			logger_log(raop_rtp->logger, LOGGER_INFO, "Error in select\n");
+			logger_log(raop_rtp->logger, LOGGER_INFO, "Error in select");
 			break;
 		}
 		if (stream_fd == -1 && FD_ISSET(raop_rtp->dsock, &rfds)) {
 			struct sockaddr_storage saddr;
 			socklen_t saddrlen;
 
-			logger_log(raop_rtp->logger, LOGGER_INFO, "Accepting client\n");
+			logger_log(raop_rtp->logger, LOGGER_INFO, "Accepting client");
 			saddrlen = sizeof(saddr);
 			stream_fd = accept(raop_rtp->dsock, (struct sockaddr *)&saddr, &saddrlen);
 			if (stream_fd == -1) {
 				/* FIXME: Error happened */
-				logger_log(raop_rtp->logger, LOGGER_INFO, "Error in accept %d %s\n", errno, strerror(errno));
+				logger_log(raop_rtp->logger, LOGGER_INFO, "Error in accept %d %s", errno, strerror(errno));
 				break;
 			}
 		}
@@ -446,11 +446,11 @@ raop_rtp_thread_tcp(void *arg)
 			ret = recv(stream_fd, (char *)(packet+packetlen), sizeof(packet)-packetlen, 0);
 			if (ret == 0) {
 				/* TCP socket closed */
-				logger_log(raop_rtp->logger, LOGGER_INFO, "TCP socket closed\n");
+				logger_log(raop_rtp->logger, LOGGER_INFO, "TCP socket closed");
 				break;
 			} else if (ret == -1) {
 				/* FIXME: Error happened */
-				logger_log(raop_rtp->logger, LOGGER_INFO, "Error in recv\n");
+				logger_log(raop_rtp->logger, LOGGER_INFO, "Error in recv");
 				break;
 			}
 			packetlen += ret;
@@ -466,7 +466,7 @@ raop_rtp_thread_tcp(void *arg)
 			rtplen = (packet[2] << 8) | packet[3];
 			if (rtplen > sizeof(packet)) {
 				/* FIXME: Too long packet */
-				logger_log(raop_rtp->logger, LOGGER_INFO, "Error, packet too long %d\n", rtplen);
+				logger_log(raop_rtp->logger, LOGGER_INFO, "Error, packet too long %d", rtplen);
 				break;
 			}
 			if (packetlen < 4+rtplen) {
@@ -493,7 +493,7 @@ raop_rtp_thread_tcp(void *arg)
 		closesocket(stream_fd);
 	}
 
-	logger_log(raop_rtp->logger, LOGGER_INFO, "Exiting TCP RAOP thread\n");
+	logger_log(raop_rtp->logger, LOGGER_INFO, "Exiting TCP RAOP thread");
 	raop_rtp->callbacks.audio_destroy(raop_rtp->callbacks.cls, cb_data);
 
 	return 0;
@@ -520,7 +520,7 @@ raop_rtp_start(raop_rtp_t *raop_rtp, int use_udp, unsigned short control_rport, 
 		use_ipv6 = 1;
 	}
 	if (raop_rtp_init_sockets(raop_rtp, use_ipv6, use_udp) < 0) {
-		logger_log(raop_rtp->logger, LOGGER_INFO, "Initializing sockets failed\n");
+		logger_log(raop_rtp->logger, LOGGER_INFO, "Initializing sockets failed");
 		MUTEX_UNLOCK(raop_rtp->run_mutex);
 		return;
 	}
