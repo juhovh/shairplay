@@ -28,6 +28,7 @@
 #include "utils.h"
 #include "netutils.h"
 #include "logger.h"
+#include "compat.h"
 
 /* Actually 345 bytes for 2048-bit key */
 #define MAX_SIGNATURE_LEN 512
