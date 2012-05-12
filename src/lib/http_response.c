@@ -18,6 +18,7 @@
 #include <assert.h>
 
 #include "http_response.h"
+#include "compat.h"
 
 struct http_response_s {
 	int complete;
