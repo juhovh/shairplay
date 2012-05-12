@@ -32,9 +32,7 @@ struct base64_s {
 	int skip_spaces;
 };
 
-static base64_t default_base64 =
-	{ .charlist = DEFAULT_CHARLIST,
-	  .use_padding = 1 };
+static base64_t default_base64 = {DEFAULT_CHARLIST, "", 0, 1, 0};
 
 static void
 initialize_charmap(base64_t *base64)

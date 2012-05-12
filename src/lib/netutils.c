@@ -178,7 +178,7 @@ netutils_parse_address(int family, const char *src, void *dst, int dstlen)
 
 	length = -1;
 	for (ptr=result; ptr!=NULL; ptr=ptr->ai_next) {
-		if (family == ptr->ai_family && dstlen >= ptr->ai_addrlen) {
+		if (family == ptr->ai_family && (unsigned int)dstlen >= ptr->ai_addrlen) {
 			memcpy(dst, ptr->ai_addr, ptr->ai_addrlen);
 			length = ptr->ai_addrlen;
 			break;
