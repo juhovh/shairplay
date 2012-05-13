@@ -94,6 +94,10 @@ raop_rtp_parse_remote(raop_rtp_t *raop_rtp, const char *remote)
 		free(original);
 		return -1;
 	}
+	if (strstr(current, ":")) {
+		/* FIXME: iTunes sends IP4 even with an IPv6 address, does it mean something */
+		family = AF_INET6;
+	}
 	ret = netutils_parse_address(family, current,
 	                             &raop_rtp->remote_saddr,
 	                             sizeof(raop_rtp->remote_saddr));

@@ -197,8 +197,8 @@ dnssd_register_raop(dnssd_t *dnssd, const char *name, unsigned short port, const
 	dnssd->TXTRecordSetValue(&txtRecord, "tp", strlen(RAOP_TP), RAOP_TP);
 	dnssd->TXTRecordSetValue(&txtRecord, "md", strlen(RAOP_MD), RAOP_MD);
 	dnssd->TXTRecordSetValue(&txtRecord, "vs", strlen(GLOBAL_VERSION), GLOBAL_VERSION);
-	dnssd->TXTRecordSetValue(&txtRecord, "am", strlen(RAOP_AM), RAOP_AM);
-	dnssd->TXTRecordSetValue(&txtRecord, "sf", strlen(RAOP_SF), RAOP_SF);
+	dnssd->TXTRecordSetValue(&txtRecord, "sm", strlen(RAOP_SM), RAOP_SM);
+	dnssd->TXTRecordSetValue(&txtRecord, "ek", strlen(RAOP_EK), RAOP_EK);
 
 	/* Convert hardware address to string */
 	ret = utils_hwaddr_raop(servname, sizeof(servname), hwaddr, hwaddrlen);
