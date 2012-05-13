@@ -44,6 +44,7 @@ extern "C" {
 #include <stdio.h>
 
 #if defined(WIN32)
+#define STDCALL                 /* Would be __stdcall but we don't want it */
 #define EXP_FUNC                __declspec(dllexport)
 #else
 #define STDCALL
