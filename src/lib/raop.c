@@ -299,9 +299,11 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 			}
 			free(datastr);
 		} else if (!strcmp(content_type, "image/jpeg")) {
-			logger_log(&conn->raop->logger, LOGGER_INFO, "UNHANDLED: Got image data of %d bytes", datalen);
+			logger_log(&conn->raop->logger, LOGGER_INFO, "Got image data of %d bytes", datalen);
+			raop_rtp_set_coverart(conn->raop_rtp, data, datalen);
 		} else if (!strcmp(content_type, "application/x-dmap-tagged")) {
-			logger_log(&conn->raop->logger, LOGGER_INFO, "UNHANDLED: Got metadata of %d bytes", datalen);
+			logger_log(&conn->raop->logger, LOGGER_INFO, "Got metadata of %d bytes", datalen);
+			raop_rtp_set_metadata(conn->raop_rtp, data, datalen);
 		}
 	} else if (!strcmp(method, "FLUSH")) {
 		const char *rtpinfo;

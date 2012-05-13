@@ -39,13 +39,21 @@ struct raop_rtp_s {
 	struct sockaddr_storage remote_saddr;
 	socklen_t remote_saddr_len;
 
+	/* MUTEX LOCKED VARIABLES START */
 	/* These variables only edited mutex locked */
 	int running;
 	int joined;
+
 	float volume;
+	unsigned char *metadata;
+	int metadata_len;
+	unsigned char *coverart;
+	int coverart_len;
+
 	int flush;
 	thread_handle_t thread;
 	mutex_handle_t run_mutex;
+	/* MUTEX LOCKED VARIABLES END */
 
 	/* Remote control and timing ports */
 	unsigned short control_rport;
@@ -153,6 +161,8 @@ raop_rtp_destroy(raop_rtp_t *raop_rtp)
 
 		MUTEX_DESTROY(raop_rtp->run_mutex);
 		raop_buffer_destroy(raop_rtp->buffer);
+		free(raop_rtp->metadata);
+		free(raop_rtp->coverart);
 		free(raop_rtp);
 	}
 }
@@ -557,6 +567,48 @@ raop_rtp_set_volume(raop_rtp_t *raop_rtp, float volume)
 	/* Set volume in thread instead */
 	MUTEX_LOCK(raop_rtp->run_mutex);
 	raop_rtp->volume = volume;
+	MUTEX_UNLOCK(raop_rtp->run_mutex);
+}
+
+void
+raop_rtp_set_metadata(raop_rtp_t *raop_rtp, const char *data, int datalen)
+{
+	unsigned char *metadata;
+
+	assert(raop_rtp);
+
+	if (datalen <= 0) {
+		return;
+	}
+	metadata = malloc(datalen);
+	assert(metadata);
+	memcpy(metadata, data, datalen);
+
+	/* Set metadata in thread instead */
+	MUTEX_LOCK(raop_rtp->run_mutex);
+	raop_rtp->metadata = metadata;
+	raop_rtp->metadata_len = datalen;
+	MUTEX_UNLOCK(raop_rtp->run_mutex);
+}
+
+void
+raop_rtp_set_coverart(raop_rtp_t *raop_rtp, const char *data, int datalen)
+{
+	unsigned char *coverart;
+
+	assert(raop_rtp);
+
+	if (datalen <= 0) {
+		return;
+	}
+	coverart = malloc(datalen);
+	assert(coverart);
+	memcpy(coverart, data, datalen);
+
+	/* Set coverart in thread instead */
+	MUTEX_LOCK(raop_rtp->run_mutex);
+	raop_rtp->coverart = coverart;
+	raop_rtp->coverart_len = datalen;
 	MUTEX_UNLOCK(raop_rtp->run_mutex);
 }
 
