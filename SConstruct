@@ -56,6 +56,7 @@ else:
 		if conf.CheckLib('ws2_32'):
 			# We have windows socket lib without getaddrinfo, disable IPv6
 			env.Append(CPPDEFINES = ['DISABLE_IPV6'])
+conf.CheckLib('winmm')
 env = conf.Finish()
 
 env.SConscript('build/SConscript', exports='env')
