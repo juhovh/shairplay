@@ -280,21 +280,29 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 		http_response_add_header(res, "Transport", buffer);
 		http_response_add_header(res, "Session", "DEADBEEF");
 	} else if (!strcmp(method, "SET_PARAMETER")) {
+		const char *content_type;
 		const char *data;
 		int datalen;
-		char *datastr;
 
+		content_type = http_request_get_header(request, "Content-Type");
 		data = http_request_get_data(request, &datalen);
-		datastr = calloc(1, datalen+1);
-		if (data && datastr && conn->raop_rtp) {
-			memcpy(datastr, data, datalen);
-			if (!strncmp(datastr, "volume: ", 8)) {
-				float vol = 0.0;
-				sscanf(datastr+8, "%f", &vol);
-				raop_rtp_set_volume(conn->raop_rtp, vol);
+		if (!strcmp(content_type, "text/parameters")) {
+			char *datastr;
+			datastr = calloc(1, datalen+1);
+			if (data && datastr && conn->raop_rtp) {
+				memcpy(datastr, data, datalen);
+				if (!strncmp(datastr, "volume: ", 8)) {
+					float vol = 0.0;
+					sscanf(datastr+8, "%f", &vol);
+					raop_rtp_set_volume(conn->raop_rtp, vol);
+				}
 			}
+			free(datastr);
+		} else if (!strcmp(content_type, "image/jpeg")) {
+			logger_log(&conn->raop->logger, LOGGER_INFO, "UNHANDLED: Got image data of %d bytes", datalen);
+		} else if (!strcmp(content_type, "application/x-dmap-tagged")) {
+			logger_log(&conn->raop->logger, LOGGER_INFO, "UNHANDLED: Got metadata of %d bytes", datalen);
 		}
-		free(datastr);
 	} else if (!strcmp(method, "FLUSH")) {
 		const char *rtpinfo;
 		int next_seq = -1;
