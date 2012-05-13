@@ -17,6 +17,8 @@ struct raop_callbacks_s {
 	void* cls;
 	void* (*audio_init)(void *cls, int bits, int channels, int samplerate);
 	void  (*audio_set_volume)(void *cls, void *session, float volume);
+	void  (*audio_set_metadata)(void *cls, void *session, const void *buffer, int buflen);
+	void  (*audio_set_coverart)(void *cls, void *session, const void *buffer, int buflen);
 	void  (*audio_process)(void *cls, void *session, const void *buffer, int buflen);
 	void  (*audio_flush)(void *cls, void *session);
 	void  (*audio_destroy)(void *cls, void *session);

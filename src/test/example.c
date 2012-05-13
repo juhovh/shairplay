@@ -22,6 +22,30 @@ audio_set_volume(void *cls, void *session, float volume)
 }
 
 static void
+audio_set_metadata(void *cls, void *session, const void *buffer, int buflen)
+{
+	int orig = buflen;
+	FILE *file = fopen("metadata.bin", "wb");
+	while (buflen > 0) {
+		buflen -= fwrite(buffer+orig-buflen, 1, buflen, file);
+	}
+	fclose(file);
+	printf("Metadata of length %d saved as metadata.bin\n", orig);
+}
+
+static void
+audio_set_coverart(void *cls, void *session, const void *buffer, int buflen)
+{
+	int orig = buflen;
+	FILE *file = fopen("coverart.jpg", "wb");
+	while (buflen > 0) {
+		buflen -= fwrite(buffer+orig-buflen, 1, buflen, file);
+	}
+	fclose(file);
+	printf("Coverart of length %d saved as coverart.jpg\n", orig);
+}
+
+static void
 audio_process(void *cls, void *session, const void *buffer, int buflen)
 {
 	int orig = buflen;
@@ -56,6 +80,8 @@ main(int argc, char *argv[])
 	raop_cbs.cls = NULL;
 	raop_cbs.audio_init = audio_init;
 	raop_cbs.audio_set_volume = audio_set_volume;
+	raop_cbs.audio_set_metadata = audio_set_metadata;
+	raop_cbs.audio_set_coverart = audio_set_coverart;
 	raop_cbs.audio_process = audio_process;
 	raop_cbs.audio_flush = audio_flush;
 	raop_cbs.audio_destroy = audio_destroy;

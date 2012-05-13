@@ -365,8 +365,8 @@ raop_init(raop_callbacks_t *callbacks, const char *pemkey)
 	}
 
 	/* Validate the callbacks structure */
-	if (!callbacks->audio_init || !callbacks->audio_set_volume ||
-	    !callbacks->audio_process || !callbacks->audio_flush ||
+	if (!callbacks->audio_init ||
+	    !callbacks->audio_process ||
 	    !callbacks->audio_destroy) {
 		return NULL;
 	}

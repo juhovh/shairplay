@@ -245,6 +245,77 @@ raop_rtp_resend_callback(void *opaque, unsigned short seqnum, unsigned short cou
 	return 0;
 }
 
+static int
+raop_rtp_process_events(raop_rtp_t *raop_rtp, void *cb_data, float *volume)
+{
+	int flush;
+	int volume_changed;
+	unsigned char *metadata;
+	int metadata_len;
+	unsigned char *coverart;
+	int coverart_len;
+
+	assert(raop_rtp);
+	assert(volume);
+
+	MUTEX_LOCK(raop_rtp->run_mutex);
+	if (!raop_rtp->running) {
+		MUTEX_UNLOCK(raop_rtp->run_mutex);
+		return 1;
+	}
+
+	/* Read the volume level */
+	volume_changed = (*volume != raop_rtp->volume);
+	*volume = raop_rtp->volume;
+
+	/* Read the flush value */
+	flush = raop_rtp->flush;
+	raop_rtp->flush = NO_FLUSH;
+
+	/* Read the metadata */
+	metadata = raop_rtp->metadata;
+	metadata_len = raop_rtp->metadata_len;
+	raop_rtp->metadata = NULL;
+	raop_rtp->metadata_len = 0;
+
+	/* Read the coverart */
+	coverart = raop_rtp->coverart;
+	coverart_len = raop_rtp->coverart_len;
+	raop_rtp->coverart = NULL;
+	raop_rtp->coverart_len = 0;
+	MUTEX_UNLOCK(raop_rtp->run_mutex);
+
+	/* Call set_volume callback if changed */
+	if (volume_changed) {
+		if (raop_rtp->callbacks.audio_set_volume) {
+			raop_rtp->callbacks.audio_set_volume(raop_rtp->callbacks.cls, cb_data, *volume);
+		}
+	}
+
+	/* Handle flush if requested */
+	if (flush != NO_FLUSH) {
+		raop_buffer_flush(raop_rtp->buffer, flush);
+		if (raop_rtp->callbacks.audio_flush) {
+			raop_rtp->callbacks.audio_flush(raop_rtp->callbacks.cls, cb_data);
+		}
+	}
+	if (metadata != NULL) {
+		if (raop_rtp->callbacks.audio_set_metadata) {
+			raop_rtp->callbacks.audio_set_metadata(raop_rtp->callbacks.cls, cb_data, metadata, metadata_len);
+		}
+		free(metadata);
+		metadata = NULL;
+	}
+	if (coverart != NULL) {
+		if (raop_rtp->callbacks.audio_set_coverart) {
+			raop_rtp->callbacks.audio_set_coverart(raop_rtp->callbacks.cls, cb_data, coverart, coverart_len);
+		}
+		free(coverart);
+		coverart = NULL;
+	}
+	return 0;
+}
+
 static THREAD_RETVAL
 raop_rtp_thread_udp(void *arg)
 {
@@ -267,34 +338,13 @@ raop_rtp_thread_udp(void *arg)
 	                               config->sampleRate);
 
 	while(1) {
-		int volume_changed;
-		int flush;
-
 		fd_set rfds;
 		struct timeval tv;
 		int nfds, ret;
 
-		MUTEX_LOCK(raop_rtp->run_mutex);
-		if (!raop_rtp->running) {
-			MUTEX_UNLOCK(raop_rtp->run_mutex);
+		/* Check if we are still running and process callbacks */
+		if (raop_rtp_process_events(raop_rtp, cb_data, &volume)) {
 			break;
-		}
-		/* Read the volume level */
-		volume_changed = (volume != raop_rtp->volume);
-		volume = raop_rtp->volume;
-
-		/* Read the flush value */
-		flush = raop_rtp->flush;
-		raop_rtp->flush = NO_FLUSH;
-		MUTEX_UNLOCK(raop_rtp->run_mutex);
-
-		/* Call set_volume callback if changed */
-		if (volume_changed) {
-			raop_rtp->callbacks.audio_set_volume(raop_rtp->callbacks.cls, cb_data, volume);
-		}
-		if (flush != NO_FLUSH) {
-			raop_buffer_flush(raop_rtp->buffer, flush);
-			raop_rtp->callbacks.audio_flush(raop_rtp->callbacks.cls, cb_data);
 		}
 
 		/* Set timeout value to 5ms */
@@ -396,24 +446,13 @@ raop_rtp_thread_tcp(void *arg)
 	                               config->sampleRate);
 
 	while (1) {
-		int volume_changed;
-
 		fd_set rfds;
 		struct timeval tv;
 		int nfds, ret;
 
-		MUTEX_LOCK(raop_rtp->run_mutex);
-		if (!raop_rtp->running) {
-			MUTEX_UNLOCK(raop_rtp->run_mutex);
+		/* Check if we are still running and process callbacks */
+		if (raop_rtp_process_events(raop_rtp, cb_data, &volume)) {
 			break;
-		}
-		volume_changed = (volume != raop_rtp->volume);
-		volume = raop_rtp->volume;
-		MUTEX_UNLOCK(raop_rtp->run_mutex);
-
-		/* Call set_volume callback if changed */
-		if (volume_changed) {
-			raop_rtp->callbacks.audio_set_volume(raop_rtp->callbacks.cls, cb_data, volume);
 		}
 
 		/* Set timeout value to 5ms */
