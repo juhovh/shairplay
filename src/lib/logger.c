@@ -20,13 +20,34 @@
 #include "logger.h"
 #include "compat.h"
 
-void
-logger_init(logger_t *logger)
+struct logger_s {
+	mutex_handle_t lvl_mutex;
+	mutex_handle_t cb_mutex;
+
+	int level;
+	logger_callback_t callback;
+};
+
+logger_t *
+logger_init()
 {
+	logger_t *logger = calloc(1, sizeof(logger_t));
 	assert(logger);
+
+	MUTEX_CREATE(logger->lvl_mutex);
+	MUTEX_CREATE(logger->cb_mutex);
 
 	logger->level = LOGGER_DEBUG;
 	logger->callback = NULL;
+	return logger;
+}
+
+void
+logger_destroy(logger_t *logger)
+{
+	MUTEX_DESTROY(logger->lvl_mutex);
+	MUTEX_DESTROY(logger->cb_mutex);
+	free(logger);
 }
 
 void
@@ -34,7 +55,9 @@ logger_set_level(logger_t *logger, int level)
 {
 	assert(logger);
 
+	MUTEX_LOCK(logger->lvl_mutex);
 	logger->level = level;
+	MUTEX_UNLOCK(logger->lvl_mutex);
 }
 
 void
@@ -42,7 +65,9 @@ logger_set_callback(logger_t *logger, logger_callback_t callback)
 {
 	assert(logger);
 
+	MUTEX_LOCK(logger->cb_mutex);
 	logger->callback = callback;
+	MUTEX_UNLOCK(logger->cb_mutex);
 }
 
 static char *
@@ -81,19 +106,26 @@ logger_log(logger_t *logger, int level, const char *fmt, ...)
 	char buffer[4096];
 	va_list ap;
 
-	if (level > logger->level)
+	MUTEX_LOCK(logger->lvl_mutex);
+	if (level > logger->level) {
+		MUTEX_UNLOCK(logger->lvl_mutex);
 		return;
+	}
+	MUTEX_UNLOCK(logger->lvl_mutex);
 
 	buffer[sizeof(buffer)-1] = '\0';
 	va_start(ap, fmt);
 	vsnprintf(buffer, sizeof(buffer)-1, fmt, ap);
 	va_end(ap);
 
+	MUTEX_LOCK(logger->cb_mutex);
 	if (logger->callback) {
 		logger->callback(level, buffer);
+		MUTEX_UNLOCK(logger->cb_mutex);
 	} else {
-		char *local = logger_utf8_to_local(buffer);
-
+		char *local;
+		MUTEX_UNLOCK(logger->cb_mutex);
+		local = logger_utf8_to_local(buffer);
 		if (local) {
 			fprintf(stderr, "%s\n", local);
 			free(local);

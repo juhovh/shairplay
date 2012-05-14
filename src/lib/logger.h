@@ -25,15 +25,13 @@
 #define LOGGER_INFO        6       /* informational */
 #define LOGGER_DEBUG       7       /* debug-level messages */
 
-typedef void (*logger_callback_t)(int level, char *msg);
+typedef void (*logger_callback_t)(int level, const char *msg);
 
-struct logger_s {
-	int level;
-	logger_callback_t callback;
-};
 typedef struct logger_s logger_t;
 
-void logger_init(logger_t *logger);
+logger_t *logger_init();
+void logger_destroy(logger_t *logger);
+
 void logger_set_level(logger_t *logger, int level);
 void logger_set_callback(logger_t *logger, logger_callback_t callback);
 

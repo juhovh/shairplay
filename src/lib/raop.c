@@ -44,7 +44,7 @@ struct raop_s {
 	raop_callbacks_t callbacks;
 
 	/* Logger instance */
-	logger_t logger;
+	logger_t *logger;
 
 	/* HTTP daemon and RSA key */
 	httpd_t *httpd;
@@ -85,21 +85,21 @@ conn_init(void *opaque, unsigned char *local, int locallen, unsigned char *remot
 	conn->raop_rtp = NULL;
 
 	if (locallen == 4) {
-		logger_log(&conn->raop->logger, LOGGER_INFO,
+		logger_log(conn->raop->logger, LOGGER_INFO,
 		           "Local: %d.%d.%d.%d",
 		           local[0], local[1], local[2], local[3]);
 	} else if (locallen == 16) {
-		logger_log(&conn->raop->logger, LOGGER_INFO,
+		logger_log(conn->raop->logger, LOGGER_INFO,
 		           "Local: %02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x",
 		           local[0], local[1], local[2], local[3], local[4], local[5], local[6], local[7],
 		           local[8], local[9], local[10], local[11], local[12], local[13], local[14], local[15]);
 	}
 	if (remotelen == 4) {
-		logger_log(&conn->raop->logger, LOGGER_INFO,
+		logger_log(conn->raop->logger, LOGGER_INFO,
 		           "Remote: %d.%d.%d.%d",
 		           remote[0], remote[1], remote[2], remote[3]);
 	} else if (remotelen == 16) {
-		logger_log(&conn->raop->logger, LOGGER_INFO,
+		logger_log(conn->raop->logger, LOGGER_INFO,
 		           "Remote: %02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x",
 		           remote[0], remote[1], remote[2], remote[3], remote[4], remote[5], remote[6], remote[7],
 		           remote[8], remote[9], remote[10], remote[11], remote[12], remote[13], remote[14], remote[15]);
@@ -144,8 +144,8 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 
 		authorization = http_request_get_header(request, "Authorization");
 		if (authorization) {
-			logger_log(&conn->raop->logger, LOGGER_DEBUG, "Our nonce: %s", conn->nonce);
-			logger_log(&conn->raop->logger, LOGGER_DEBUG, "Authorization: %s", authorization);
+			logger_log(conn->raop->logger, LOGGER_DEBUG, "Our nonce: %s", conn->nonce);
+			logger_log(conn->raop->logger, LOGGER_DEBUG, "Authorization: %s", authorization);
 		}
 		if (!digest_is_valid("AppleTV", raop->password, conn->nonce, method, http_request_get_url(request), authorization)) {
 			char *authstr;
@@ -168,7 +168,7 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 			http_response_add_header(res, "WWW-Authenticate", authstr);
 			free(authstr);
 		} else {
-			logger_log(&conn->raop->logger, LOGGER_DEBUG, "AUTHENTICATION SUCCESS!");
+			logger_log(conn->raop->logger, LOGGER_DEBUG, "AUTHENTICATION SUCCESS!");
 		}
 	}
 
@@ -184,8 +184,8 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 		            conn->local, conn->locallen, raop->hwaddr, raop->hwaddrlen);
 		http_response_add_header(res, "Apple-Response", signature);
 
-		logger_log(&conn->raop->logger, LOGGER_DEBUG, "Got challenge: %s", challenge);
-		logger_log(&conn->raop->logger, LOGGER_DEBUG, "Got response: %s", signature);
+		logger_log(conn->raop->logger, LOGGER_DEBUG, "Got challenge: %s", challenge);
+		logger_log(conn->raop->logger, LOGGER_DEBUG, "Got response: %s", signature);
 	}
 
 	if (require_auth) {
@@ -211,22 +211,22 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 			aeskeystr = sdp_get_rsaaeskey(sdp);
 			aesivstr = sdp_get_aesiv(sdp);
 
-			logger_log(&conn->raop->logger, LOGGER_DEBUG, "connection: %s", remotestr);
-			logger_log(&conn->raop->logger, LOGGER_DEBUG, "fmtp: %s", fmtpstr);
-			logger_log(&conn->raop->logger, LOGGER_DEBUG, "rsaaeskey: %s", aeskeystr);
-			logger_log(&conn->raop->logger, LOGGER_DEBUG, "aesiv: %s", aesivstr);
+			logger_log(conn->raop->logger, LOGGER_DEBUG, "connection: %s", remotestr);
+			logger_log(conn->raop->logger, LOGGER_DEBUG, "fmtp: %s", fmtpstr);
+			logger_log(conn->raop->logger, LOGGER_DEBUG, "rsaaeskey: %s", aeskeystr);
+			logger_log(conn->raop->logger, LOGGER_DEBUG, "aesiv: %s", aesivstr);
 
 			aeskeylen = rsakey_decrypt(raop->rsakey, aeskey, sizeof(aeskey), aeskeystr);
 			aesivlen = rsakey_parseiv(raop->rsakey, aesiv, sizeof(aesiv), aesivstr);
-			logger_log(&conn->raop->logger, LOGGER_DEBUG, "aeskeylen: %d", aeskeylen);
-			logger_log(&conn->raop->logger, LOGGER_DEBUG, "aesivlen: %d", aesivlen);
+			logger_log(conn->raop->logger, LOGGER_DEBUG, "aeskeylen: %d", aeskeylen);
+			logger_log(conn->raop->logger, LOGGER_DEBUG, "aesivlen: %d", aesivlen);
 
 			if (conn->raop_rtp) {
 				/* This should never happen */
 				raop_rtp_destroy(conn->raop_rtp);
 				conn->raop_rtp = NULL;
 			}
-			conn->raop_rtp = raop_rtp_init(&raop->logger, &raop->callbacks, remotestr, fmtpstr, aeskey, aesiv);
+			conn->raop_rtp = raop_rtp_init(raop->logger, &raop->callbacks, remotestr, fmtpstr, aeskey, aesiv);
 			sdp_destroy(sdp);
 		}
 	} else if (!strcmp(method, "SETUP")) {
@@ -239,7 +239,7 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 		transport = http_request_get_header(request, "Transport");
 		assert(transport);
 
-		logger_log(&conn->raop->logger, LOGGER_INFO, "Transport: %s", transport);
+		logger_log(conn->raop->logger, LOGGER_INFO, "Transport: %s", transport);
 		use_udp = strncmp(transport, "RTP/AVP/TCP", 11);
 		if (use_udp) {
 			char *original, *current, *tmpstr;
@@ -252,12 +252,12 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 
 					ret = sscanf(tmpstr, "control_port=%hu", &value);
 					if (ret == 1) {
-						logger_log(&conn->raop->logger, LOGGER_DEBUG, "Found remote control port: %hu", value);
+						logger_log(conn->raop->logger, LOGGER_DEBUG, "Found remote control port: %hu", value);
 						remote_cport = value;
 					}
 					ret = sscanf(tmpstr, "timing_port=%hu", &value);
 					if (ret == 1) {
-						logger_log(&conn->raop->logger, LOGGER_DEBUG, "Found remote timing port: %hu", value);
+						logger_log(conn->raop->logger, LOGGER_DEBUG, "Found remote timing port: %hu", value);
 						remote_tport = value;
 					}
 				}
@@ -276,7 +276,7 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 			         "RTP/AVP/TCP;unicast;interleaved=0-1;mode=record;server_port=%u",
 			         dport);
 		}
-		logger_log(&conn->raop->logger, LOGGER_INFO, "Responding with %s", buffer);
+		logger_log(conn->raop->logger, LOGGER_INFO, "Responding with %s", buffer);
 		http_response_add_header(res, "Transport", buffer);
 		http_response_add_header(res, "Session", "DEADBEEF");
 	} else if (!strcmp(method, "SET_PARAMETER")) {
@@ -299,10 +299,10 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 			}
 			free(datastr);
 		} else if (!strcmp(content_type, "image/jpeg")) {
-			logger_log(&conn->raop->logger, LOGGER_INFO, "Got image data of %d bytes", datalen);
+			logger_log(conn->raop->logger, LOGGER_INFO, "Got image data of %d bytes", datalen);
 			raop_rtp_set_coverart(conn->raop_rtp, data, datalen);
 		} else if (!strcmp(content_type, "application/x-dmap-tagged")) {
-			logger_log(&conn->raop->logger, LOGGER_INFO, "Got metadata of %d bytes", datalen);
+			logger_log(conn->raop->logger, LOGGER_INFO, "Got metadata of %d bytes", datalen);
 			raop_rtp_set_metadata(conn->raop_rtp, data, datalen);
 		}
 	} else if (!strcmp(method, "FLUSH")) {
@@ -311,7 +311,7 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 
 		rtpinfo = http_request_get_header(request, "RTP-Info");
 		if (rtpinfo) {
-			logger_log(&conn->raop->logger, LOGGER_INFO, "Flush with RTP-Info: %s", rtpinfo);
+			logger_log(conn->raop->logger, LOGGER_INFO, "Flush with RTP-Info: %s", rtpinfo);
 			if (!strncmp(rtpinfo, "seq=", 4)) {
 				next_seq = strtol(rtpinfo+4, NULL, 10);
 			}
@@ -330,7 +330,7 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 	}
 	http_response_finish(res, NULL, 0);
 
-	logger_log(&conn->raop->logger, LOGGER_DEBUG, "Got request %s with URL %s", method, http_request_get_url(request));
+	logger_log(conn->raop->logger, LOGGER_DEBUG, "Got request %s with URL %s", method, http_request_get_url(request));
 	*response = res;
 }
 
@@ -378,7 +378,7 @@ raop_init(raop_callbacks_t *callbacks, const char *pemkey)
 	}
 
 	/* Initialize the logger */
-	logger_init(&raop->logger);
+	raop->logger = logger_init();
 
 	/* Set HTTP callbacks to our handlers */
 	memset(&httpd_cbs, 0, sizeof(httpd_cbs));
@@ -388,7 +388,7 @@ raop_init(raop_callbacks_t *callbacks, const char *pemkey)
 	httpd_cbs.conn_destroy = &conn_destroy;
 
 	/* Initialize the http daemon */
-	httpd = httpd_init(&raop->logger, &httpd_cbs, 10, 1);
+	httpd = httpd_init(raop->logger, &httpd_cbs, 10, 1);
 	if (!httpd) {
 		free(raop);
 		return NULL;
@@ -433,6 +433,7 @@ raop_destroy(raop_t *raop)
 
 		httpd_destroy(raop->httpd);
 		rsakey_destroy(raop->rsakey);
+		logger_destroy(raop->logger);
 		free(raop);
 
 		/* Cleanup the network */
@@ -446,6 +447,22 @@ raop_is_running(raop_t *raop)
 	assert(raop);
 
 	return httpd_is_running(raop->httpd);
+}
+
+void
+raop_set_log_level(raop_t *raop, int level)
+{
+	assert(raop);
+
+	logger_set_level(raop->logger, level);
+}
+
+void
+raop_set_log_callback(raop_t *raop, raop_log_callback_t callback)
+{
+	assert(raop);
+
+	logger_set_callback(raop->logger, callback);
 }
 
 int
