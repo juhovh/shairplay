@@ -45,6 +45,7 @@ struct raop_rtp_s {
 	int joined;
 
 	float volume;
+	int volume_changed;
 	unsigned char *metadata;
 	int metadata_len;
 	unsigned char *coverart;
@@ -246,9 +247,10 @@ raop_rtp_resend_callback(void *opaque, unsigned short seqnum, unsigned short cou
 }
 
 static int
-raop_rtp_process_events(raop_rtp_t *raop_rtp, void *cb_data, float *volume)
+raop_rtp_process_events(raop_rtp_t *raop_rtp, void *cb_data)
 {
 	int flush;
+	float volume;
 	int volume_changed;
 	unsigned char *metadata;
 	int metadata_len;
@@ -256,7 +258,6 @@ raop_rtp_process_events(raop_rtp_t *raop_rtp, void *cb_data, float *volume)
 	int coverart_len;
 
 	assert(raop_rtp);
-	assert(volume);
 
 	MUTEX_LOCK(raop_rtp->run_mutex);
 	if (!raop_rtp->running) {
@@ -265,8 +266,9 @@ raop_rtp_process_events(raop_rtp_t *raop_rtp, void *cb_data, float *volume)
 	}
 
 	/* Read the volume level */
-	volume_changed = (*volume != raop_rtp->volume);
-	*volume = raop_rtp->volume;
+	volume = raop_rtp->volume;
+	volume_changed = raop_rtp->volume_changed;
+	raop_rtp->volume_changed = 0;
 
 	/* Read the flush value */
 	flush = raop_rtp->flush;
@@ -288,7 +290,7 @@ raop_rtp_process_events(raop_rtp_t *raop_rtp, void *cb_data, float *volume)
 	/* Call set_volume callback if changed */
 	if (volume_changed) {
 		if (raop_rtp->callbacks.audio_set_volume) {
-			raop_rtp->callbacks.audio_set_volume(raop_rtp->callbacks.cls, cb_data, *volume);
+			raop_rtp->callbacks.audio_set_volume(raop_rtp->callbacks.cls, cb_data, volume);
 		}
 	}
 
@@ -324,7 +326,6 @@ raop_rtp_thread_udp(void *arg)
 	unsigned int packetlen;
 	struct sockaddr_storage saddr;
 	socklen_t saddrlen;
-	float volume = 0.0;
 
 	const ALACSpecificConfig *config;
 	void *cb_data = NULL;
@@ -343,7 +344,7 @@ raop_rtp_thread_udp(void *arg)
 		int nfds, ret;
 
 		/* Check if we are still running and process callbacks */
-		if (raop_rtp_process_events(raop_rtp, cb_data, &volume)) {
+		if (raop_rtp_process_events(raop_rtp, cb_data)) {
 			break;
 		}
 
@@ -432,7 +433,6 @@ raop_rtp_thread_tcp(void *arg)
 	int stream_fd = -1;
 	unsigned char packet[RAOP_PACKET_LEN];
 	unsigned int packetlen = 0;
-	float volume = 0.0;
 
 	const ALACSpecificConfig *config;
 	void *cb_data = NULL;
@@ -451,7 +451,7 @@ raop_rtp_thread_tcp(void *arg)
 		int nfds, ret;
 
 		/* Check if we are still running and process callbacks */
-		if (raop_rtp_process_events(raop_rtp, cb_data, &volume)) {
+		if (raop_rtp_process_events(raop_rtp, cb_data)) {
 			break;
 		}
 
@@ -606,6 +606,7 @@ raop_rtp_set_volume(raop_rtp_t *raop_rtp, float volume)
 	/* Set volume in thread instead */
 	MUTEX_LOCK(raop_rtp->run_mutex);
 	raop_rtp->volume = volume;
+	raop_rtp->volume_changed = 1;
 	MUTEX_UNLOCK(raop_rtp->run_mutex);
 }
 
