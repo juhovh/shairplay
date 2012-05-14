@@ -110,6 +110,7 @@ httpd_add_connection(httpd_t *httpd, int fd, unsigned char *local, int local_len
 		}
 	}
 	if (i == httpd->max_connections) {
+		/* This code should never be reached, we do not select server_fd when full */
 		logger_log(httpd->logger, LOGGER_INFO, "Max connections reached");
 		shutdown(fd, SHUT_RDWR);
 		closesocket(fd);

@@ -92,7 +92,7 @@ main(int argc, char *argv[])
 	raop_cbs.audio_flush = audio_flush;
 	raop_cbs.audio_destroy = audio_destroy;
 
-	raop = raop_init_from_keyfile(&raop_cbs, "airport.key");
+	raop = raop_init_from_keyfile(10, &raop_cbs, "airport.key");
 	raop_set_log_level(raop, RAOP_LOG_DEBUG);
 	raop_set_log_callback(raop, &raop_log_callback);
 	raop_start(raop, &raop_port, hwaddr, sizeof(hwaddr), "test");

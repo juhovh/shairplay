@@ -349,7 +349,7 @@ conn_destroy(void *ptr)
 }
 
 raop_t *
-raop_init(raop_callbacks_t *callbacks, const char *pemkey)
+raop_init(int max_clients, raop_callbacks_t *callbacks, const char *pemkey)
 {
 	raop_t *raop;
 	httpd_t *httpd;
@@ -357,6 +357,8 @@ raop_init(raop_callbacks_t *callbacks, const char *pemkey)
 	httpd_callbacks_t httpd_cbs;
 
 	assert(callbacks);
+	assert(max_clients > 0);
+	assert(max_clients < 100);
 	assert(pemkey);
 
 	/* Initialize the network */
@@ -388,7 +390,7 @@ raop_init(raop_callbacks_t *callbacks, const char *pemkey)
 	httpd_cbs.conn_destroy = &conn_destroy;
 
 	/* Initialize the http daemon */
-	httpd = httpd_init(raop->logger, &httpd_cbs, 10, 1);
+	httpd = httpd_init(raop->logger, &httpd_cbs, max_clients, 1);
 	if (!httpd) {
 		free(raop);
 		return NULL;
@@ -412,7 +414,7 @@ raop_init(raop_callbacks_t *callbacks, const char *pemkey)
 }
 
 raop_t *
-raop_init_from_keyfile(raop_callbacks_t *callbacks, const char *keyfile)
+raop_init_from_keyfile(int max_clients, raop_callbacks_t *callbacks, const char *keyfile)
 {
 	raop_t *raop;
 	char *pemstr;
@@ -420,7 +422,7 @@ raop_init_from_keyfile(raop_callbacks_t *callbacks, const char *keyfile)
 	if (utils_read_file(&pemstr, keyfile) < 0) {
 		return NULL;
 	}
-	raop = raop_init(callbacks, pemstr);
+	raop = raop_init(max_clients, callbacks, pemstr);
 	free(pemstr);
 	return raop;
 }
