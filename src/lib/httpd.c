@@ -240,7 +240,7 @@ httpd_thread(void *arg)
 				continue;
 			}
 		}
-		if (FD_ISSET(httpd->server_fd6, &rfds)) {
+		if (httpd->server_fd6 != -1 && FD_ISSET(httpd->server_fd6, &rfds)) {
 			ret = httpd_accept_connection(httpd, httpd->server_fd6, 1);
 			if (ret == -1) {
 				break;
