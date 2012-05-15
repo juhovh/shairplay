@@ -71,19 +71,16 @@ netutils_init_socket(unsigned short *port, int use_ipv6, int use_udp)
 	memset(&saddr, 0, sizeof(saddr));
 	if (use_ipv6) {
 		struct sockaddr_in6 *sin6ptr = (struct sockaddr_in6 *)&saddr;
-		int v6only = 0;
+		int v6only = 1;
 
 		/* Initialize sockaddr for bind */
 		sin6ptr->sin6_family = family;
 		sin6ptr->sin6_addr = in6addr_any;
 		sin6ptr->sin6_port = htons(*port);
 
-		/* Make sure we also listen to IPv4 addresses */
-		ret = setsockopt(server_fd, IPPROTO_IPV6, IPV6_V6ONLY,
-		                 (char *) &v6only, sizeof(v6only));
-		if (ret == -1) {
-			goto cleanup;
-		}
+		/* Make sure we only listen to IPv6 addresses */
+		setsockopt(server_fd, IPPROTO_IPV6, IPV6_V6ONLY,
+		           (char *) &v6only, sizeof(v6only));
 
 		socklen = sizeof(*sin6ptr);
 		ret = bind(server_fd, (struct sockaddr *)sin6ptr, socklen);

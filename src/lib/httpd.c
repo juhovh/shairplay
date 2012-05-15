@@ -48,8 +48,9 @@ struct httpd_s {
 	thread_handle_t thread;
 	mutex_handle_t run_mutex;
 
-	/* Server fd for accepting connections */
-	int server_fd;
+	/* Server fds for accepting connections */
+	int server_fd4;
+	int server_fd6;
 };
 
 httpd_t *
@@ -110,7 +111,7 @@ httpd_add_connection(httpd_t *httpd, int fd, unsigned char *local, int local_len
 		}
 	}
 	if (i == httpd->max_connections) {
-		/* This code should never be reached, we do not select server_fd when full */
+		/* This code should never be reached, we do not select server_fds when full */
 		logger_log(httpd->logger, LOGGER_INFO, "Max connections reached");
 		shutdown(fd, SHUT_RDWR);
 		closesocket(fd);
@@ -121,6 +122,40 @@ httpd_add_connection(httpd_t *httpd, int fd, unsigned char *local, int local_len
 	httpd->connections[i].socket_fd = fd;
 	httpd->connections[i].connected = 1;
 	httpd->connections[i].user_data = httpd->callbacks.conn_init(httpd->callbacks.opaque, local, local_len, remote, remote_len);
+}
+
+static int
+httpd_accept_connection(httpd_t *httpd, int server_fd, int is_ipv6)
+{
+	struct sockaddr_storage remote_saddr;
+	socklen_t remote_saddrlen;
+	struct sockaddr_storage local_saddr;
+	socklen_t local_saddrlen;
+	unsigned char *local, *remote;
+	int local_len, remote_len;
+	int ret, fd;
+
+	remote_saddrlen = sizeof(remote_saddr);
+	fd = accept(server_fd, (struct sockaddr *)&remote_saddr, &remote_saddrlen);
+	if (fd == -1) {
+		/* FIXME: Error happened */
+		return -1;
+	}
+
+	local_saddrlen = sizeof(local_saddr);
+	ret = getsockname(fd, (struct sockaddr *)&local_saddr, &local_saddrlen);
+	if (ret == -1) {
+		closesocket(fd);
+		return 0;
+	}
+
+	logger_log(httpd->logger, LOGGER_INFO, "Accepted %s client on socket %d",
+	           (is_ipv6 ? "IPv6"  : "IPv4"), fd);
+	local = netutils_get_address(&local_saddr, &local_len);
+	remote = netutils_get_address(&remote_saddr, &remote_len);
+
+	httpd_add_connection(httpd, fd, local, local_len, remote, remote_len);
+	return 1;
 }
 
 static void
@@ -166,8 +201,14 @@ httpd_thread(void *arg)
 		/* Get the correct nfds value and set rfds */
 		FD_ZERO(&rfds);
 		if (httpd->open_connections < httpd->max_connections) {
-			FD_SET(httpd->server_fd, &rfds);
-			nfds = httpd->server_fd+1;
+			FD_SET(httpd->server_fd4, &rfds);
+			nfds = httpd->server_fd4+1;
+			if (httpd->server_fd6 != -1) {
+				FD_SET(httpd->server_fd6, &rfds);
+				if (nfds <= httpd->server_fd6) {
+					nfds = httpd->server_fd6+1;
+				}
+			}
 		}
 		for (i=0; i<httpd->max_connections; i++) {
 			int socket_fd;
@@ -191,34 +232,21 @@ httpd_thread(void *arg)
 			break;
 		}
 
-		if (FD_ISSET(httpd->server_fd, &rfds)) {
-			struct sockaddr_storage remote_saddr;
-			socklen_t remote_saddrlen;
-			struct sockaddr_storage local_saddr;
-			socklen_t local_saddrlen;
-			unsigned char *local, *remote;
-			int local_len, remote_len;
-			int fd;
-
-			remote_saddrlen = sizeof(remote_saddr);
-			fd = accept(httpd->server_fd, (struct sockaddr *)&remote_saddr, &remote_saddrlen);
-			if (fd == -1) {
-				/* FIXME: Error happened */
-				break;
-			}
-
-			local_saddrlen = sizeof(local_saddr);
-			ret = getsockname(fd, (struct sockaddr *)&local_saddr, &local_saddrlen);
+		if (FD_ISSET(httpd->server_fd4, &rfds)) {
+			ret = httpd_accept_connection(httpd, httpd->server_fd4, 0);
 			if (ret == -1) {
-				closesocket(fd);
+				break;
+			} else if (ret == 0) {
 				continue;
 			}
-
-			logger_log(httpd->logger, LOGGER_INFO, "Accepted client on socket %d", fd);
-			local = netutils_get_address(&local_saddr, &local_len);
-			remote = netutils_get_address(&remote_saddr, &remote_len);
-
-			httpd_add_connection(httpd, fd, local, local_len, remote, remote_len);
+		}
+		if (FD_ISSET(httpd->server_fd6, &rfds)) {
+			ret = httpd_accept_connection(httpd, httpd->server_fd6, 1);
+			if (ret == -1) {
+				break;
+			} else if (ret == 0) {
+				continue;
+			}
 		}
 		for (i=0; i<httpd->max_connections; i++) {
 			http_connection_t *connection = &httpd->connections[i];
@@ -315,23 +343,33 @@ httpd_start(httpd_t *httpd, unsigned short *port)
 		return 0;
 	}
 
-	httpd->server_fd = netutils_init_socket(port, 1, 0);
-	if (httpd->server_fd == -1) {
-		logger_log(httpd->logger, LOGGER_INFO, "Error initialising IPv6 socket %d", SOCKET_GET_ERROR());
-		logger_log(httpd->logger, LOGGER_INFO, "Attempting to fall back to IPv4");
-		httpd->server_fd = netutils_init_socket(port, 0, 0);
-	}
-	if (httpd->server_fd == -1) {
-		logger_log(httpd->logger, LOGGER_INFO, "Error initialising socket %d", SOCKET_GET_ERROR());
+	httpd->server_fd4 = netutils_init_socket(port, 0, 0);
+	if (httpd->server_fd4 == -1) {
+		logger_log(httpd->logger, LOGGER_ERR, "Error initialising socket %d", SOCKET_GET_ERROR());
 		MUTEX_UNLOCK(httpd->run_mutex);
 		return -1;
 	}
-	if (listen(httpd->server_fd, 5) == -1) {
-		logger_log(httpd->logger, LOGGER_INFO, "Error listening to socket");
+	httpd->server_fd6 = netutils_init_socket(port, 1, 0);
+	if (httpd->server_fd6 == -1) {
+		logger_log(httpd->logger, LOGGER_WARNING, "Error initialising IPv6 socket %d", SOCKET_GET_ERROR());
+		logger_log(httpd->logger, LOGGER_WARNING, "Continuing without IPv6 support");
+	}
+
+	if (listen(httpd->server_fd4, 5) == -1) {
+		logger_log(httpd->logger, LOGGER_ERR, "Error listening to IPv4 socket");
+		closesocket(httpd->server_fd4);
+		closesocket(httpd->server_fd6);
 		MUTEX_UNLOCK(httpd->run_mutex);
 		return -2;
 	}
-	logger_log(httpd->logger, LOGGER_INFO, "Initialized server socket");
+	if (httpd->server_fd6 != -1 && listen(httpd->server_fd6, 5) == -1) {
+		logger_log(httpd->logger, LOGGER_ERR, "Error listening to IPv6 socket");
+		closesocket(httpd->server_fd4);
+		closesocket(httpd->server_fd6);
+		MUTEX_UNLOCK(httpd->run_mutex);
+		return -2;
+	}
+	logger_log(httpd->logger, LOGGER_INFO, "Initialized server socket(s)");
 
 	/* Set values correctly and create new thread */
 	httpd->running = 1;
