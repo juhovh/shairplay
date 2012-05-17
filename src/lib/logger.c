@@ -37,7 +37,7 @@ logger_init()
 	MUTEX_CREATE(logger->lvl_mutex);
 	MUTEX_CREATE(logger->cb_mutex);
 
-	logger->level = LOGGER_DEBUG;
+	logger->level = LOGGER_WARNING;
 	logger->callback = NULL;
 	return logger;
 }
