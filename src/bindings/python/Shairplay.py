@@ -28,19 +28,24 @@ import platform
 
 from ctypes import *
 
-audio_init_prototype =        CFUNCTYPE(py_object, c_void_p, c_int, c_int, c_int)
-audio_set_volume_prototype =  CFUNCTYPE(None, c_void_p, c_void_p, c_float)
-audio_process_prototype =     CFUNCTYPE(None, c_void_p, c_void_p, c_void_p, c_int)
-audio_flush_prototype =       CFUNCTYPE(None, c_void_p, c_void_p)
-audio_destroy_prototype =     CFUNCTYPE(None, c_void_p, c_void_p)
+audio_init_prototype =          CFUNCTYPE(py_object, c_void_p, c_int, c_int, c_int)
+audio_process_prototype =       CFUNCTYPE(None, c_void_p, c_void_p, c_void_p, c_int)
+audio_destroy_prototype =       CFUNCTYPE(None, c_void_p, c_void_p)
+
+audio_flush_prototype =         CFUNCTYPE(None, c_void_p, c_void_p)
+audio_set_volume_prototype =    CFUNCTYPE(None, c_void_p, c_void_p, c_float)
+audio_set_metadata_prototype =  CFUNCTYPE(None, c_void_p, c_void_p, c_void_p, c_int)
+audio_set_coverart_prototype =  CFUNCTYPE(None, c_void_p, c_void_p, c_void_p, c_int)
 
 class RaopNativeCallbacks(Structure):
-	_fields_ = [("cls",               py_object),
-	            ("audio_init",        audio_init_prototype),
-	            ("audio_set_volume",  audio_set_volume_prototype),
-	            ("audio_process",     audio_process_prototype),
-	            ("audio_flush",       audio_flush_prototype),
-	            ("audio_destroy",     audio_destroy_prototype)]
+	_fields_ = [("cls",                 py_object),
+	            ("audio_init",          audio_init_prototype),
+	            ("audio_process",       audio_process_prototype),
+	            ("audio_destroy",       audio_destroy_prototype),
+	            ("audio_flush",         audio_flush_prototype),
+	            ("audio_set_volume",    audio_set_volume_prototype),
+	            ("audio_set_metadata",  audio_set_metadata_prototype),
+	            ("audio_set_coverart",  audio_set_coverart_prototype)]
 
 def InitShairplay(libshairplay):
 	# Initialize dnssd related functions
@@ -59,7 +64,7 @@ def InitShairplay(libshairplay):
 
 	# Initialize raop related functions
 	libshairplay.raop_init.restype = c_void_p
-	libshairplay.raop_init.argtypes = [POINTER(RaopNativeCallbacks), c_char_p]
+	libshairplay.raop_init.argtypes = [c_int, POINTER(RaopNativeCallbacks), c_char_p]
 	libshairplay.raop_is_running.restype = c_int
 	libshairplay.raop_is_running.argtypes = [c_void_p]
 	libshairplay.raop_start.restype = c_int
@@ -121,16 +126,22 @@ class RaopCallbacks:
 	def audio_init(self, bits, channels, samplerate):
 		raise NotImplementedError()
 
-	def audio_set_volume(self, session, volume):
-		pass
-
 	def audio_process(self, session, buffer):
 		raise NotImplementedError()
+
+	def audio_destroy(self, session):
+		raise NotImplementedError()
+
+	def audio_set_volume(self, session, volume):
+		pass
 
 	def audio_flush(self, session):
 		pass
 
-	def audio_destroy(self, session):
+	def audio_set_metadata(self, session, buffer):
+		pass
+
+	def audio_set_coverart(self, session, buffer):
 		pass
 
 class RaopService:
@@ -139,18 +150,10 @@ class RaopService:
 		self.sessions.append(session)
 		return session
 
-	def audio_set_volume_cb(self, cls, sessionptr, volume):
-		session = cast(sessionptr, py_object).value
-		self.callbacks.audio_set_volume(session, volume)
-
 	def audio_process_cb(self, cls, sessionptr, buffer, buflen):
 		session = cast(sessionptr, py_object).value
 		strbuffer = string_at(buffer, buflen)
 		self.callbacks.audio_process(session, strbuffer)
-
-	def audio_flush_cb(self, cls, sessionptr):
-		session = cast(sessionptr, py_object).value
-		self.callbacks.audio_flush(session)
 
 	def audio_destroy_cb(self, cls, sessionptr):
 		session = cast(sessionptr, py_object).value
@@ -158,8 +161,26 @@ class RaopService:
 		if session in self.sessions:
 			self.sessions.remove(session)
 
+	def audio_flush_cb(self, cls, sessionptr):
+		session = cast(sessionptr, py_object).value
+		self.callbacks.audio_flush(session)
 
-	def __init__(self, libshairplay, callbacks):
+	def audio_set_volume_cb(self, cls, sessionptr, volume):
+		session = cast(sessionptr, py_object).value
+		self.callbacks.audio_set_volume(session, volume)
+
+	def audio_set_metadata_cb(self, cls, sessionptr, buffer, buflen):
+		session = cast(sessionptr, py_object).value
+		strbuffer = string_at(buffer, buflen)
+		self.callbacks.audio_set_metadata(session, strbuffer)
+
+	def audio_set_coverart_cb(self, cls, sessionptr, buffer, buflen):
+		session = cast(sessionptr, py_object).value
+		strbuffer = string_at(buffer, buflen)
+		self.callbacks.audio_set_coverart(session, strbuffer)
+
+
+	def __init__(self, libshairplay, max_clients, callbacks):
 		self.libshairplay = libshairplay
 		self.callbacks = callbacks
 		self.sessions = []
@@ -168,13 +189,15 @@ class RaopService:
 		# We need to hold a reference to native_callbacks
 		self.native_callbacks = RaopNativeCallbacks()
 		self.native_callbacks.audio_init = audio_init_prototype(self.audio_init_cb)
-		self.native_callbacks.audio_set_volume = audio_set_volume_prototype(self.audio_set_volume_cb)
 		self.native_callbacks.audio_process = audio_process_prototype(self.audio_process_cb)
-		self.native_callbacks.audio_flush = audio_flush_prototype(self.audio_flush_cb)
 		self.native_callbacks.audio_destroy = audio_destroy_prototype(self.audio_destroy_cb)
+		self.native_callbacks.audio_flush = audio_flush_prototype(self.audio_flush_cb)
+		self.native_callbacks.audio_set_volume = audio_set_volume_prototype(self.audio_set_volume_cb)
+		self.native_callbacks.audio_set_metadata = audio_set_metadata_prototype(self.audio_set_metadata_cb)
+		self.native_callbacks.audio_set_coverart = audio_set_coverart_prototype(self.audio_set_coverart_cb)
 
 		# Initialize the raop instance with our callbacks
-		self.instance = self.libshairplay.raop_init(pointer(self.native_callbacks), RSA_KEY)
+		self.instance = self.libshairplay.raop_init(max_clients, pointer(self.native_callbacks), RSA_KEY)
 		if self.instance == None:
 			raise RuntimeError("Initializing library failed")
 

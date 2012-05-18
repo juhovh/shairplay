@@ -6,6 +6,10 @@ env.Append(CPPPATH = ['include'])
 
 # Set up the environment for compiling the libraries
 libenv = env.Clone()
+conf = Configure(libenv)
+conf.CheckLib('pthread')
+conf.CheckLib('dns_sd')
+libenv = conf.Finish()
 libenv.Append(CPPPATH = ['lib'])
 
 # Make sure libraries are compiled with DLL_EXPORT on windows

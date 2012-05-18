@@ -5,14 +5,22 @@ from Shairplay import *
 hwaddr = pack('BBBBBB', 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB)
 class SampleCallbacks(RaopCallbacks):
 	def audio_init(self, bits, channels, samplerate):
-		print "Initializing " + str(bits) + " " + str(channels) + " " + str(samplerate)
+		print "Initializing", bits, channels, samplerate
 	def audio_process(self, session, buffer):
-		print "Processing " + str(len(buffer)) + " bytes of audio"
+		print "Processing", + len(buffer), "bytes of audio"
+	def audio_destroy(self, session):
+		print "Destroying"
+	def audio_set_volume(self, session, volume):
+		print "Set volume to", volume
+	def audio_set_metadata(self, session, metadata):
+		print "Got", len(metadata),  "bytes of metadata"
+	def audio_set_coverart(self, session, coverart):
+		print "Got", len(coverart), "bytes of coverart"
 
 shairplay = LoadShairplay(".")
 callbacks = SampleCallbacks()
 
-raop = RaopService(shairplay, callbacks)
+raop = RaopService(shairplay, 10, callbacks)
 port = raop.start(5000, hwaddr)
 
 dnssd = DnssdService(shairplay)
