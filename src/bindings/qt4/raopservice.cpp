@@ -1,5 +1,7 @@
 #include "raopservice.h"
+#include "raopcallbackhandler.h"
 
+#include <QThread>
 #include <QDebug>
 
 #include <shairplay/raop.h>
@@ -29,24 +31,45 @@
 "2gG0N5hvJpzwwhbhXqFKA4zaaSrw622wDniAK5MlIE0tIAKKP4yxNGjoD2QYjhBGuhvkWKY=\n"\
 "-----END RSA PRIVATE KEY-----\n"
 
+typedef struct {
+    QThread *             cb_thread;
+    RaopCallbackHandler * cb_handler;
+    void *                cb_session;
+} audio_session_t;
 
 static void*
 audio_init_cb(void *cls, int bits, int channels, int samplerate)
 {
-    void *session;
-    QMetaObject::invokeMethod((QObject*)cls, "audioInit", Qt::BlockingQueuedConnection,
-                              Q_ARG(void*, (void*)&session),
+    audio_session_t *audio_session = 0;
+
+    audio_session = (audio_session_t *)calloc(1, sizeof(audio_session_t));
+    audio_session->cb_thread = new QThread();
+    audio_session->cb_thread->start();
+
+    /* This whole hack is required because QAudioOutput
+     * needs to be created in a QThread, threads created
+     * outside Qt are not allowed (they have no eventloop) */
+    audio_session->cb_handler = new RaopCallbackHandler();
+    audio_session->cb_handler->moveToThread(audio_session->cb_thread);
+    audio_session->cb_handler->init((RaopCallbacks *)cls);
+
+    QMetaObject::invokeMethod(audio_session->cb_handler, "audioInit",
+                              Qt::BlockingQueuedConnection,
+                              Q_ARG(void*, (void*)&audio_session->cb_session),
                               Q_ARG(int, bits),
                               Q_ARG(int, channels),
                               Q_ARG(int, samplerate));
-    return session;
+    return audio_session;
 }
 
 static void
 audio_process_cb(void *cls, void *session, const void *buffer, int buflen)
 {
-    QMetaObject::invokeMethod((QObject*)cls, "audioProcess", Qt::BlockingQueuedConnection,
-                              Q_ARG(void*, session),
+    Q_UNUSED(cls)
+    audio_session_t *audio_session = (audio_session_t *)session;
+    QMetaObject::invokeMethod(audio_session->cb_handler, "audioProcess",
+                              Qt::BlockingQueuedConnection,
+                              Q_ARG(void*, audio_session->cb_session),
                               Q_ARG(void*, (void*)buffer),
                               Q_ARG(int, buflen));
 }
@@ -54,30 +77,51 @@ audio_process_cb(void *cls, void *session, const void *buffer, int buflen)
 static void
 audio_destroy_cb(void *cls, void *session)
 {
-    QMetaObject::invokeMethod((QObject*)cls, "audioDestroy", Qt::BlockingQueuedConnection,
-                              Q_ARG(void*, session));
+    Q_UNUSED(cls)
+    audio_session_t *audio_session = (audio_session_t *)session;
+    QMetaObject::invokeMethod(audio_session->cb_handler, "audioDestroy",
+                              Qt::BlockingQueuedConnection,
+                              Q_ARG(void*, audio_session->cb_session));
+
+    // Wait until the session thread has finished
+    audio_session->cb_thread->quit();
+    audio_session->cb_thread->wait();
+
+    // Delete all session variables
+    delete audio_session->cb_handler;
+    delete audio_session->cb_thread;
+    free(audio_session);
 }
 
 static void
 audio_flush_cb(void *cls, void *session)
 {
-    QMetaObject::invokeMethod((QObject*)cls, "audioFlush", Qt::BlockingQueuedConnection,
-                              Q_ARG(void*, session));
+    Q_UNUSED(cls)
+    audio_session_t *audio_session = (audio_session_t *)session;
+    QMetaObject::invokeMethod(audio_session->cb_handler, "audioFlush",
+                              Qt::BlockingQueuedConnection,
+                              Q_ARG(void*, audio_session->cb_session));
 }
 
 static void
 audio_set_volume_cb(void *cls, void *session, float volume)
 {
-    QMetaObject::invokeMethod((QObject*)cls, "audioSetVolume", Qt::BlockingQueuedConnection,
-                              Q_ARG(void*, session),
+    Q_UNUSED(cls)
+    audio_session_t *audio_session = (audio_session_t *)session;
+    QMetaObject::invokeMethod(audio_session->cb_handler, "audioSetVolume",
+                              Qt::BlockingQueuedConnection,
+                              Q_ARG(void*, audio_session->cb_session),
                               Q_ARG(float, volume));
 }
 
 static void
 audio_set_metadata_cb(void *cls, void *session, const void *buffer, int buflen)
 {
-    QMetaObject::invokeMethod((QObject*)cls, "audioSetVolume", Qt::BlockingQueuedConnection,
-                              Q_ARG(void*, session),
+    Q_UNUSED(cls)
+    audio_session_t *audio_session = (audio_session_t *)session;
+    QMetaObject::invokeMethod(audio_session->cb_handler, "audioSetVolume",
+                              Qt::BlockingQueuedConnection,
+                              Q_ARG(void*, audio_session->cb_session),
                               Q_ARG(void*, (void*)buffer),
                               Q_ARG(int, buflen));
 }
@@ -85,8 +129,11 @@ audio_set_metadata_cb(void *cls, void *session, const void *buffer, int buflen)
 static void
 audio_set_coverart_cb(void *cls, void *session, const void *buffer, int buflen)
 {
-    QMetaObject::invokeMethod((QObject*)cls, "audioSetVolume", Qt::BlockingQueuedConnection,
-                              Q_ARG(void*, session),
+    Q_UNUSED(cls)
+    audio_session_t *audio_session = (audio_session_t *)session;
+    QMetaObject::invokeMethod(audio_session->cb_handler, "audioSetVolume",
+                              Qt::BlockingQueuedConnection,
+                              Q_ARG(void*, audio_session->cb_session),
                               Q_ARG(void*, (void*)buffer),
                               Q_ARG(int, buflen));
 }
@@ -95,10 +142,6 @@ RaopService::RaopService(QObject *parent) :
     QObject(parent),
     m_raop(0)
 {
-    /* This whole hack is required because QAudioOutput
-     * needs to be created in a QThread, threads created
-     * outside Qt are not allowed (they have no eventloop) */
-    m_handler.moveToThread(&m_thread);
 }
 
 RaopService::~RaopService()
@@ -111,8 +154,7 @@ bool RaopService::init(int max_clients, RaopCallbacks *callbacks)
 {
     raop_callbacks_t raop_cbs;
 
-    m_handler.init(callbacks);
-    raop_cbs.cls = &m_handler;
+    raop_cbs.cls = callbacks;
     raop_cbs.audio_init = &audio_init_cb;
     raop_cbs.audio_process = &audio_process_cb;
     raop_cbs.audio_destroy = &audio_destroy_cb;
@@ -123,7 +165,6 @@ bool RaopService::init(int max_clients, RaopCallbacks *callbacks)
 
     m_raop = raop_init(max_clients, &raop_cbs, RSA_KEY);
     if (!m_raop) {
-        printf("Foobar\n");
         return false;
     }
     return true;
@@ -137,11 +178,8 @@ bool RaopService::isRunning()
 bool RaopService::start(quint16 port, const QByteArray & hwaddr)
 {
     int ret;
-    m_thread.start();
     ret = raop_start(m_raop, &port, hwaddr.data(), hwaddr.size(), 0);
     if (ret < 0) {
-        m_thread.quit();
-        m_thread.wait();
         return false;
     }
     return true;
@@ -151,9 +189,5 @@ void RaopService::stop()
 {
     if (m_raop) {
         raop_stop(m_raop);
-    }
-    if (m_thread.isRunning()) {
-        m_thread.quit();
-        m_thread.wait();
     }
 }

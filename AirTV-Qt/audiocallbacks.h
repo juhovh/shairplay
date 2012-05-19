@@ -11,7 +11,7 @@ class AudioCallbacks : public RaopCallbacks
 public:
     explicit AudioCallbacks(QObject *parent = 0);
 
-    virtual void * audioInit(int bits, int channels, int samplerate);
+    virtual void *audioInit(int bits, int channels, int samplerate);
     virtual void audioSetVolume(void *session, float volume);
     virtual void audioProcess(void *session, const QByteArray &buffer);
     virtual void audioFlush(void *session);

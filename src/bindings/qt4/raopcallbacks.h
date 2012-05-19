@@ -9,7 +9,7 @@ class RaopCallbacks : public QObject
 public:
     explicit RaopCallbacks(QObject *parent = 0) : QObject(parent) {}
 
-    virtual void * audioInit(int bits, int channels, int samplerate) = 0;
+    virtual void *audioInit(int bits, int channels, int samplerate) = 0;
     virtual void audioProcess(void *session, const QByteArray & buffer) = 0;
     virtual void audioDestroy(void *session) = 0;
 

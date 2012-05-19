@@ -2,9 +2,8 @@
 #define RAOPSERVICE_H
 
 #include <QObject>
-#include <QThread>
 
-#include "raopcallbackhandler.h"
+#include "raopcallbacks.h"
 
 #include "raop.h"
 
@@ -22,9 +21,6 @@ public:
 
 private:
     raop_t *             m_raop;
-
-    QThread              m_thread;
-    RaopCallbackHandler  m_handler;
 
 signals:
 
