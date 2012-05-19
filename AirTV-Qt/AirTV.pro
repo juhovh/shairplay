@@ -24,7 +24,7 @@ macx {
     QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.5
 }
 
-INCLUDEPATH += ../src/include/
+INCLUDEPATH += ../src/include/ ../src/bindings/qt4/
 SOURCES += main.cpp\
     ../src/lib/utils.c \
     ../src/lib/sdp.c \
@@ -50,18 +50,34 @@ SOURCES += main.cpp\
     ../src/lib/logger.c \
     ../src/lib/digest.c \
     audiooutput.cpp \
-    raopservice.cpp \
     mainapplication.cpp \
-    raopcallbackhandler.cpp
+    audiocallbacks.cpp \
+    ../src/bindings/qt4/raopservice.cpp \
+    ../src/bindings/qt4/raopcallbackhandler.cpp \
+    ../src/bindings/qt4/dnssdservice.cpp
 
 HEADERS  += \
     audiooutput.h \
-    raopservice.h \
     mainapplication.h \
-    raopcallbackhandler.h
+    audiocallbacks.h \
+    ../src/bindings/qt4/raopservice.h \
+    ../src/bindings/qt4/raopcallbacks.h \
+    ../src/bindings/qt4/raopcallbackhandler.h \
+    ../src/bindings/qt4/dnssdservice.h
 
 FORMS    += mainwindow.ui
 
 RESOURCES += \
     AirTV.qrc
+
+
+
+
+
+
+
+
+
+
+
 

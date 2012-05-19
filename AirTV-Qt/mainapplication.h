@@ -21,6 +21,8 @@
 #include <QAction>
 
 #include "raopservice.h"
+#include "dnssdservice.h"
+#include "audiocallbacks.h"
 
 class MainApplication : public QObject
 {
@@ -34,6 +36,8 @@ public:
 
 private:
     RaopService *raopService;
+    DnssdService *dnssdService;
+    AudioCallbacks m_callbacks;
 
     QSystemTrayIcon *trayIcon;
     QMenu *trayIconMenu;

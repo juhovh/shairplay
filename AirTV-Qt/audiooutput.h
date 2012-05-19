@@ -33,7 +33,7 @@ public:
 
     void start();
     void setVolume(float volume);
-    void output(const char *data, int datalen);
+    void output(const QByteArray & data);
     void flush();
     void stop();
 

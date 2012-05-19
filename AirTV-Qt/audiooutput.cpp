@@ -96,11 +96,11 @@ void AudioOutput::setVolume(float volume)
     m_volume = volume;
 }
 
-void AudioOutput::output(const char *data, int datalen)
+void AudioOutput::output(const QByteArray & data)
 {
     if (m_output && m_output->state() != QAudio::StoppedState) {
         // Append input data to the end of buffer
-        m_buffer.append(data, datalen);
+        m_buffer.append(data);
 
         // Check if our buffer has grown too large
         if (m_buffer.length() > 2*BUFFER_SIZE) {
