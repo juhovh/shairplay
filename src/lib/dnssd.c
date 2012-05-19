@@ -26,14 +26,18 @@
 #define MAX_DEVICEID 18
 #define MAX_SERVNAME 256
 
-#ifndef WIN32
-# include <dns_sd.h>
-# define DNSSD_STDCALL
-#else
-# include <stdint.h>
-# if !defined(EFI32) && !defined(EFI64)
-#  define DNSSD_STDCALL __stdcall
+#define USE_LIBDL (defined(HAVE_LIBDL) && !defined(__APPLE__))
+
+#if defined(WIN32) || USE_LIBDL
+# ifdef WIN32
+#  include <stdint.h>
+#  if !defined(EFI32) && !defined(EFI64)
+#   define DNSSD_STDCALL __stdcall
+#  else
+#   define DNSSD_STDCALL
+#  endif
 # else
+#  include <dlfcn.h>
 #  define DNSSD_STDCALL
 # endif
 
@@ -53,6 +57,10 @@ typedef void (DNSSD_STDCALL *DNSServiceRegisterReply)
     const char                          *domain,
     void                                *context
     );
+
+#else
+# include <dns_sd.h>
+# define DNSSD_STDCALL
 #endif
 
 typedef DNSServiceErrorType (DNSSD_STDCALL *DNSServiceRegister_t)
@@ -92,6 +100,8 @@ typedef const void * (DNSSD_STDCALL *TXTRecordGetBytesPtr_t)(const TXTRecordRef 
 struct dnssd_s {
 #ifdef WIN32
 	HMODULE module;
+#elif USE_LIBDL
+	void *module;
 #endif
 
 	DNSServiceRegister_t       DNSServiceRegister;
@@ -144,6 +154,29 @@ dnssd_init(int *error)
 		free(dnssd);
 		return NULL;
 	}
+#elif USE_LIBDL
+	dnssd->module = dlopen("libdns_sd.so", RTLD_LAZY);
+	if (!dnssd->module) {
+		if (error) *error = DNSSD_ERROR_LIBNOTFOUND;
+		free(dnssd);
+		return NULL;
+	}
+	dnssd->DNSServiceRegister = (DNSServiceRegister_t)dlsym(dnssd->module, "DNSServiceRegister");
+	dnssd->DNSServiceRefDeallocate = (DNSServiceRefDeallocate_t)dlsym(dnssd->module, "DNSServiceRefDeallocate");
+	dnssd->TXTRecordCreate = (TXTRecordCreate_t)dlsym(dnssd->module, "TXTRecordCreate");
+	dnssd->TXTRecordSetValue = (TXTRecordSetValue_t)dlsym(dnssd->module, "TXTRecordSetValue");
+	dnssd->TXTRecordGetLength = (TXTRecordGetLength_t)dlsym(dnssd->module, "TXTRecordGetLength");
+	dnssd->TXTRecordGetBytesPtr = (TXTRecordGetBytesPtr_t)dlsym(dnssd->module, "TXTRecordGetBytesPtr");
+	dnssd->TXTRecordDeallocate = (TXTRecordDeallocate_t)dlsym(dnssd->module, "TXTRecordDeallocate");
+
+	if (!dnssd->DNSServiceRegister || !dnssd->DNSServiceRefDeallocate || !dnssd->TXTRecordCreate ||
+	    !dnssd->TXTRecordSetValue || !dnssd->TXTRecordGetLength || !dnssd->TXTRecordGetBytesPtr ||
+	    !dnssd->TXTRecordDeallocate) {
+		if (error) *error = DNSSD_ERROR_PROCNOTFOUND;
+		dlclose(dnssd->module);
+		free(dnssd);
+		return NULL;
+	}
 #else
 	dnssd->DNSServiceRegister = &DNSServiceRegister;
 	dnssd->DNSServiceRefDeallocate = &DNSServiceRefDeallocate;
@@ -163,6 +196,8 @@ dnssd_destroy(dnssd_t *dnssd)
 	if (dnssd) {
 #ifdef WIN32
 		FreeLibrary(dnssd->module);
+#elif USE_LIBDL
+		dlclose(dnssd->module);
 #endif
 		free(dnssd);
 	}
