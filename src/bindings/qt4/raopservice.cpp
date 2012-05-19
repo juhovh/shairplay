@@ -4,8 +4,6 @@
 #include <QThread>
 #include <QDebug>
 
-#include <shairplay/raop.h>
-
 #define RSA_KEY \
 "-----BEGIN RSA PRIVATE KEY-----\n"\
 "MIIEpQIBAAKCAQEA59dE8qLieItsH1WgjrcFRKj6eUWqi+bGLOX1HL3U3GhC/j0Qg90u3sG/1CUt\n"\

@@ -3,7 +3,7 @@
 
 #include <QObject>
 
-#include "dnssd.h"
+#include <shairplay/dnssd.h>
 
 class DnssdService : public QObject
 {

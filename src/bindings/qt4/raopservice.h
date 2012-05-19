@@ -3,9 +3,9 @@
 
 #include <QObject>
 
-#include "raopcallbacks.h"
+#include <shairplay/raop.h>
 
-#include "raop.h"
+#include "raopcallbacks.h"
 
 class RaopService : public QObject
 {
@@ -20,7 +20,7 @@ public:
     void stop();
 
 private:
-    raop_t *             m_raop;
+    raop_t *  m_raop;
 
 signals:
 
