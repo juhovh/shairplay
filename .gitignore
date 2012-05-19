@@ -6,6 +6,15 @@
 project.xcworkspace
 xcuserdata
 
+# autotools
+Makefile
+*.lo
+*.in
+.deps
+.libs
+*.la
+*.a
+
 # SCons specific
 build
 .sconf_temp
