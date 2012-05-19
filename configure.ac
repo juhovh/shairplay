@@ -13,6 +13,8 @@ AC_PROG_CC
 AC_PROG_LIBTOOL
 
 # Checks for libraries.
+LT_LIB_DLLOAD
+LT_LIB_M
 
 # Checks for header files.
 AC_HEADER_STDC
@@ -20,7 +22,8 @@ AC_HEADER_STDC
 # Checks for typedefs, structures, and compiler characteristics.
 
 # Checks for library functions.
-
+AC_CHECK_LIB([socket],[connect])
+AC_CHECK_LIB([pthread],[pthread_create])
 
 
 # Custom check for os, similar to webkit

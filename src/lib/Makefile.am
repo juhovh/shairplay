@@ -8,6 +8,10 @@ libshairplay_la_SOURCES = base64.c base64.h digest.c digest.h dnssd.c dnssdint.h
 # This library depends on 3rd party libraries
 libshairplay_la_LIBADD = crypto/libcrypto.la alac/libalac.la
 libshairplay_la_LDFLAGS = -version-info 0:0:0
+
+libshairplay_la_LIBADD += $(LIBADD_DLOPEN)
+libshairplay_la_LIBADD += $(LIBM)
+
 if OS_WIN32
 libshairplay_la_LDFLAGS += -no-undefined -lws2_32 -lwinmm
 endif

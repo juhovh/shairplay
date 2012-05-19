@@ -17,6 +17,8 @@
 #include <stdio.h>
 #include <assert.h>
 
+#include "config.h"
+
 #include "dnssd.h"
 #include "dnssdint.h"
 #include "global.h"
