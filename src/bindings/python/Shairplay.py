@@ -28,6 +28,18 @@ import platform
 
 from ctypes import *
 
+class RaopLogLevel:
+	EMERG   = 0
+	ALERT   = 1
+	CRIT    = 2
+	ERR     = 3
+	WARNING = 4
+	NOTICE  = 5
+	INFO    = 6
+	DEBUG   = 7
+	
+raop_log_callback_prototype =   CFUNCTYPE(None, c_int, c_char_p)
+
 audio_init_prototype =          CFUNCTYPE(py_object, c_void_p, c_int, c_int, c_int)
 audio_process_prototype =       CFUNCTYPE(None, c_void_p, c_void_p, c_void_p, c_int)
 audio_destroy_prototype =       CFUNCTYPE(None, c_void_p, c_void_p)
@@ -65,6 +77,10 @@ def InitShairplay(libshairplay):
 	# Initialize raop related functions
 	libshairplay.raop_init.restype = c_void_p
 	libshairplay.raop_init.argtypes = [c_int, POINTER(RaopNativeCallbacks), c_char_p]
+	libshairplay.raop_set_log_level.restype = None
+	libshairplay.raop_set_log_level.argtypes = [c_void_p, c_int]
+	libshairplay.raop_set_log_callback.restype = None
+	libshairplay.raop_set_log_callback.argtypes = [c_void_p, raop_log_callback_prototype]
 	libshairplay.raop_is_running.restype = c_int
 	libshairplay.raop_is_running.argtypes = [c_void_p]
 	libshairplay.raop_start.restype = c_int
@@ -145,6 +161,12 @@ class RaopCallbacks:
 		pass
 
 class RaopService:
+	def log_callback_cb(self, level, message):
+		if self.log_callback != None:
+			self.log_callback(level, message)
+		else:
+			print message
+
 	def audio_init_cb(self, cls, bits, channels, samplerate):
 		session = self.callbacks.audio_init(bits, channels, samplerate)
 		self.sessions.append(session)
@@ -201,6 +223,11 @@ class RaopService:
 		if self.instance == None:
 			raise RuntimeError("Initializing library failed")
 
+		# We need to hold a reference to the log callback wrapper
+		self.log_callback_pointer = raop_log_callback_prototype(self.log_callback_cb)
+		self.libshairplay.raop_set_log_callback(self.instance, self.log_callback_pointer)
+		self.log_callback = None
+
 	def __del__(self):
 		if self.instance != None:
 			self.libshairplay.raop_destroy(self.instance)
@@ -211,6 +238,12 @@ class RaopService:
 			return True
 		else:
 			return False
+
+	def set_log_level(self, level):
+		self.libshairplay.raop_set_log_level(self.instance, level)
+
+	def set_log_callback(self, log_callback):
+		self.log_callback = log_callback
 
 	def start(self, port, hwaddrstr, password=None):
 		port = c_ushort(port)

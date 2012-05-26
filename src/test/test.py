@@ -20,7 +20,12 @@ class SampleCallbacks(RaopCallbacks):
 shairplay = LoadShairplay(".")
 callbacks = SampleCallbacks()
 
+def log_callback(level, message):
+	print "Level", level, ":", message
+
 raop = RaopService(shairplay, 10, callbacks)
+raop.set_log_level(RaopLogLevel.DEBUG)
+raop.set_log_callback(log_callback)
 port = raop.start(5000, hwaddr)
 
 dnssd = DnssdService(shairplay)
