@@ -161,12 +161,6 @@ class RaopCallbacks:
 		pass
 
 class RaopService:
-	def log_callback_cb(self, level, message):
-		if self.log_callback != None:
-			self.log_callback(level, message)
-		else:
-			print message
-
 	def audio_init_cb(self, cls, bits, channels, samplerate):
 		session = self.callbacks.audio_init(bits, channels, samplerate)
 		self.sessions.append(session)
@@ -223,11 +217,6 @@ class RaopService:
 		if self.instance == None:
 			raise RuntimeError("Initializing library failed")
 
-		# We need to hold a reference to the log callback wrapper
-		self.log_callback_pointer = raop_log_callback_prototype(self.log_callback_cb)
-		self.libshairplay.raop_set_log_callback(self.instance, self.log_callback_pointer)
-		self.log_callback = None
-
 	def __del__(self):
 		if self.instance != None:
 			self.libshairplay.raop_destroy(self.instance)
@@ -243,7 +232,9 @@ class RaopService:
 		self.libshairplay.raop_set_log_level(self.instance, level)
 
 	def set_log_callback(self, log_callback):
-		self.log_callback = log_callback
+		# We need to hold a reference to the log callback instance
+		self.log_callback = raop_log_callback_prototype(log_callback)
+		self.libshairplay.raop_set_log_callback(self.instance, self.log_callback)
 
 	def start(self, port, hwaddrstr, password=None):
 		port = c_ushort(port)
