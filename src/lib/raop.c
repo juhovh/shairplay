@@ -349,7 +349,7 @@ conn_destroy(void *ptr)
 }
 
 raop_t *
-raop_init(int max_clients, raop_callbacks_t *callbacks, const char *pemkey)
+raop_init(int max_clients, raop_callbacks_t *callbacks, const char *pemkey, int *error)
 {
 	raop_t *raop;
 	httpd_t *httpd;
@@ -414,7 +414,7 @@ raop_init(int max_clients, raop_callbacks_t *callbacks, const char *pemkey)
 }
 
 raop_t *
-raop_init_from_keyfile(int max_clients, raop_callbacks_t *callbacks, const char *keyfile)
+raop_init_from_keyfile(int max_clients, raop_callbacks_t *callbacks, const char *keyfile, int *error)
 {
 	raop_t *raop;
 	char *pemstr;
@@ -422,7 +422,7 @@ raop_init_from_keyfile(int max_clients, raop_callbacks_t *callbacks, const char 
 	if (utils_read_file(&pemstr, keyfile) < 0) {
 		return NULL;
 	}
-	raop = raop_init(max_clients, callbacks, pemstr);
+	raop = raop_init(max_clients, callbacks, pemstr, error);
 	free(pemstr);
 	return raop;
 }

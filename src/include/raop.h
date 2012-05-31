@@ -43,8 +43,8 @@ struct raop_callbacks_s {
 };
 typedef struct raop_callbacks_s raop_callbacks_t;
 
-RAOP_API raop_t *raop_init(int max_clients, raop_callbacks_t *callbacks, const char *pemkey);
-RAOP_API raop_t *raop_init_from_keyfile(int max_clients, raop_callbacks_t *callbacks, const char *keyfile);
+RAOP_API raop_t *raop_init(int max_clients, raop_callbacks_t *callbacks, const char *pemkey, int *error);
+RAOP_API raop_t *raop_init_from_keyfile(int max_clients, raop_callbacks_t *callbacks, const char *keyfile, int *error);
 
 RAOP_API void raop_set_log_level(raop_t *raop, int level);
 RAOP_API void raop_set_log_callback(raop_t *raop, raop_log_callback_t callback, void *cls);
