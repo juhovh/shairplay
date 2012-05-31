@@ -184,7 +184,7 @@ bool RaopService::init(int max_clients, RaopCallbacks *callbacks)
     raop_cbs.audio_set_metadata = &audio_set_metadata_cb;
     raop_cbs.audio_set_coverart = &audio_set_coverart_cb;
 
-    m_raop = raop_init(max_clients, &raop_cbs, RSA_KEY);
+    m_raop = raop_init(max_clients, &raop_cbs, RSA_KEY, 0);
     if (!m_raop) {
         return false;
     }
