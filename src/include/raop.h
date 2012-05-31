@@ -25,7 +25,7 @@ extern "C" {
 
 typedef struct raop_s raop_t;
 
-typedef void (*raop_log_callback_t)(int level, const char *msg);
+typedef void (*raop_log_callback_t)(void *cls, int level, const char *msg);
 
 struct raop_callbacks_s {
 	void* cls;
@@ -47,7 +47,7 @@ RAOP_API raop_t *raop_init(int max_clients, raop_callbacks_t *callbacks, const c
 RAOP_API raop_t *raop_init_from_keyfile(int max_clients, raop_callbacks_t *callbacks, const char *keyfile);
 
 RAOP_API void raop_set_log_level(raop_t *raop, int level);
-RAOP_API void raop_set_log_callback(raop_t *raop, raop_log_callback_t callback);
+RAOP_API void raop_set_log_callback(raop_t *raop, raop_log_callback_t callback, void *cls);
 
 RAOP_API int raop_start(raop_t *raop, unsigned short *port, const char *hwaddr, int hwaddrlen, const char *password);
 RAOP_API int raop_is_running(raop_t *raop);

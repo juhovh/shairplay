@@ -25,6 +25,7 @@ struct logger_s {
 	mutex_handle_t cb_mutex;
 
 	int level;
+	void *cls;
 	logger_callback_t callback;
 };
 
@@ -61,11 +62,12 @@ logger_set_level(logger_t *logger, int level)
 }
 
 void
-logger_set_callback(logger_t *logger, logger_callback_t callback)
+logger_set_callback(logger_t *logger, logger_callback_t callback, void *cls)
 {
 	assert(logger);
 
 	MUTEX_LOCK(logger->cb_mutex);
+	logger->cls = cls;
 	logger->callback = callback;
 	MUTEX_UNLOCK(logger->cb_mutex);
 }
@@ -120,7 +122,7 @@ logger_log(logger_t *logger, int level, const char *fmt, ...)
 
 	MUTEX_LOCK(logger->cb_mutex);
 	if (logger->callback) {
-		logger->callback(level, buffer);
+		logger->callback(logger->cls, level, buffer);
 		MUTEX_UNLOCK(logger->cb_mutex);
 	} else {
 		char *local;

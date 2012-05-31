@@ -67,7 +67,7 @@ audio_destroy(void *cls, void *session)
 }
 
 static void
-raop_log_callback(int level, const char *msg)
+raop_log_callback(void *cls, int level, const char *msg)
 {
 	printf("RAOP LOG(%d): %s\n", level, msg);
 }
@@ -94,7 +94,7 @@ main(int argc, char *argv[])
 
 	raop = raop_init_from_keyfile(10, &raop_cbs, "airport.key");
 	raop_set_log_level(raop, RAOP_LOG_DEBUG);
-	raop_set_log_callback(raop, &raop_log_callback);
+	raop_set_log_callback(raop, &raop_log_callback, NULL);
 	raop_start(raop, &raop_port, hwaddr, sizeof(hwaddr), "test");
 
 	dnssd = dnssd_init(NULL);

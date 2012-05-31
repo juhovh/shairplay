@@ -460,11 +460,11 @@ raop_set_log_level(raop_t *raop, int level)
 }
 
 void
-raop_set_log_callback(raop_t *raop, raop_log_callback_t callback)
+raop_set_log_callback(raop_t *raop, raop_log_callback_t callback, void *cls)
 {
 	assert(raop);
 
-	logger_set_callback(raop->logger, callback);
+	logger_set_callback(raop->logger, callback, cls);
 }
 
 int
