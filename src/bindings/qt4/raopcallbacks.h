@@ -26,11 +26,20 @@
 
 #include <QObject>
 
-class RaopCallbacks : public QObject
+class RaopLogHandler : public QObject
 {
     Q_OBJECT
 public:
-    explicit RaopCallbacks(QObject *parent = 0) : QObject(parent) {}
+    explicit RaopLogHandler(QObject *parent = 0) : QObject(parent) {}
+
+    virtual void logCallback(int level, const char *msg) = 0;
+};
+
+class RaopAudioHandler : public QObject
+{
+    Q_OBJECT
+public:
+    explicit RaopAudioHandler(QObject *parent = 0) : QObject(parent) {}
 
     virtual void *audioInit(int bits, int channels, int samplerate) = 0;
     virtual void audioProcess(void *session, const QByteArray & buffer) = 0;
@@ -40,11 +49,6 @@ public:
     virtual void audioSetVolume(void *session, float volume) { Q_UNUSED(session) Q_UNUSED(volume) }
     virtual void audioSetMetadata(void *session, const QByteArray & buffer) { Q_UNUSED(session) Q_UNUSED(buffer) }
     virtual void audioSetCoverart(void *session, const QByteArray & buffer) { Q_UNUSED(session) Q_UNUSED(buffer) }
-
-signals:
-
-public slots:
-
 };
 
 #endif // RAOPCALLBACKS_H

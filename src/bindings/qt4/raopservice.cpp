@@ -72,7 +72,7 @@ audio_init_cb(void *cls, int bits, int channels, int samplerate)
      * outside Qt are not allowed (they have no eventloop) */
     audio_session->cb_handler = new RaopCallbackHandler();
     audio_session->cb_handler->moveToThread(audio_session->cb_thread);
-    audio_session->cb_handler->init((RaopCallbacks *)cls);
+    audio_session->cb_handler->init((RaopAudioHandler *)cls);
 
     QMetaObject::invokeMethod(audio_session->cb_handler, "audioInit",
                               Qt::BlockingQueuedConnection,
@@ -171,7 +171,7 @@ RaopService::~RaopService()
     raop_destroy(m_raop);
 }
 
-bool RaopService::init(int max_clients, RaopCallbacks *callbacks)
+bool RaopService::init(int max_clients, RaopAudioHandler *callbacks)
 {
     raop_callbacks_t raop_cbs;
 
@@ -191,6 +191,16 @@ bool RaopService::init(int max_clients, RaopCallbacks *callbacks)
     return true;
 }
 
+void RaopService::setLogLevel(int level)
+{
+    Q_UNUSED(level)
+}
+
+void RaopService::setLogHandler(RaopLogHandler *logger)
+{
+    Q_UNUSED(logger)
+}
+
 bool RaopService::isRunning()
 {
     return (raop_is_running(m_raop) != 0);
@@ -205,6 +215,7 @@ bool RaopService::start(quint16 port, const QByteArray & hwaddr)
     }
     return true;
 }
+
 
 void RaopService::stop()
 {

@@ -19,7 +19,7 @@
 
 #include "audiooutput.h"
 
-class AudioCallbacks : public RaopCallbacks
+class AudioCallbacks : public RaopAudioHandler
 {
     Q_OBJECT
 public:

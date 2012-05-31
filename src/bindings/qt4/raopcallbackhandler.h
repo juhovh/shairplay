@@ -33,10 +33,10 @@ class RaopCallbackHandler : public QObject
     Q_OBJECT
 public:
     explicit RaopCallbackHandler(QObject *parent = 0);
-    void init(RaopCallbacks *callbacks);
+    void init(RaopAudioHandler *callbacks);
 
 private:
-    RaopCallbacks * m_callbacks;
+    RaopAudioHandler * m_callbacks;
 
 signals:
 

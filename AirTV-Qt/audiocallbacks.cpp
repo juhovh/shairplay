@@ -15,7 +15,7 @@
 #include "audiocallbacks.h"
 
 AudioCallbacks::AudioCallbacks(QObject *parent) :
-    RaopCallbacks(parent)
+    RaopAudioHandler(parent)
 {
 }
 

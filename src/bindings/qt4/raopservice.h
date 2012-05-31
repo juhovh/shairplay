@@ -37,7 +37,9 @@ public:
     explicit RaopService(QObject *parent = 0);
     ~RaopService();
 
-    bool init(int max_clients, RaopCallbacks *callbacks);
+    bool init(int max_clients, RaopAudioHandler *callbacks);
+    void setLogLevel(int level);
+    void setLogHandler(RaopLogHandler *logger);
     bool start(quint16 port, const QByteArray & hwaddr);
     bool isRunning();
     void stop();

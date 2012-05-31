@@ -28,7 +28,7 @@ RaopCallbackHandler::RaopCallbackHandler(QObject *parent) :
 {
 }
 
-void RaopCallbackHandler::init(RaopCallbacks *callbacks)
+void RaopCallbackHandler::init(RaopAudioHandler *callbacks)
 {
     m_callbacks = callbacks;
 }
