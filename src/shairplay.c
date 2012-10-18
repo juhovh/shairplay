@@ -257,7 +257,7 @@ main(int argc, char *argv[])
 	raop_cbs.audio_destroy = audio_destroy;
 	raop_cbs.audio_set_volume = audio_set_volume;
 
-	raop = raop_init_from_keyfile(10, &raop_cbs, "airport.key");
+	raop = raop_init_from_keyfile(10, &raop_cbs, "airport.key", NULL);
 	if (raop == NULL) {
 		fprintf(stderr, "Could not initialize the RAOP service\n");
 		return -1;
