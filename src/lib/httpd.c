@@ -326,6 +326,21 @@ httpd_thread(void *arg)
 		httpd_remove_connection(httpd, connection);
 	}
 
+	// shutdown server sockets
+	if (httpd->server_fd4 != -1)
+	{
+		shutdown(httpd->server_fd4, SHUT_WR);
+		closesocket(httpd->server_fd4);
+		httpd->server_fd4 = -1;
+	}
+
+	if (httpd->server_fd6 != -1)
+	{
+		shutdown(httpd->server_fd6, SHUT_WR);
+		closesocket(httpd->server_fd6);
+		httpd->server_fd6 = -1;
+	}
+
 	logger_log(httpd->logger, LOGGER_INFO, "Exiting HTTP thread");
 
 	return 0;
