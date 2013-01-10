@@ -14,10 +14,16 @@ Makefile
 .libs
 *.la
 *.a
-
-# SCons specific
-build
-.sconf_temp
-.sconsign.dblite
-config.log
+m4/
+missing
+libtool
+ltmain.sh
+install-sh
+depcomp
+configure
+config.*
+autom4te.cache
+aclocal.m4
+stamp-h1
+src/shairplay
 
