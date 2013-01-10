@@ -48,7 +48,7 @@ typedef SSIZE_T ssize_t;
  * faster
  */
 #ifndef HTTP_PARSER_STRICT
-# define HTTP_PARSER_STRICT 1
+# define HTTP_PARSER_STRICT 0
 #endif
 
 /* Compile with -DHTTP_PARSER_DEBUG=1 to add extra debugging information to
@@ -117,6 +117,19 @@ typedef int (*http_cb) (http_parser*);
   /* RFC-5789 */                    \
   XX(24, PATCH,       PATCH)        \
   XX(25, PURGE,       PURGE)        \
+  /* RFC-2326 (RTSP) */             \
+  XX(26, DESCRIBE,    DESCRIBE)     \
+  XX(27, ANNOUNCE,    ANNOUNCE)     \
+  XX(28, SETUP,       SETUP)        \
+  XX(29, PLAY,        PLAY)         \
+  XX(30, PAUSE,       PAUSE)        \
+  XX(31, TEARDOWN,    TEARDOWN)     \
+  XX(32, GET_PARAMETER, GET_PARAMETER) \
+  XX(33, SET_PARAMETER, SET_PARAMETER) \
+  XX(34, REDIRECT,    REDIRECT)     \
+  XX(35, RECORD,      RECORD)       \
+  /* RAOP */                        \
+  XX(36, FLUSH,       FLUSH)        \
 
 enum http_method
   {

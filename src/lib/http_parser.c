@@ -891,20 +891,22 @@ size_t http_parser_execute (http_parser *parser,
         parser->method = (enum http_method) 0;
         parser->index = 1;
         switch (ch) {
+          case 'A': parser->method = HTTP_ANNOUNCE; break;
           case 'C': parser->method = HTTP_CONNECT; /* or COPY, CHECKOUT */ break;
-          case 'D': parser->method = HTTP_DELETE; break;
-          case 'G': parser->method = HTTP_GET; break;
+          case 'D': parser->method = HTTP_DELETE; /* or DESCRIBE */ break;
+          case 'F': parser->method = HTTP_FLUSH; break;
+          case 'G': parser->method = HTTP_GET; /* or GET_PARAMETER */ break;
           case 'H': parser->method = HTTP_HEAD; break;
           case 'L': parser->method = HTTP_LOCK; break;
           case 'M': parser->method = HTTP_MKCOL; /* or MOVE, MKACTIVITY, MERGE, M-SEARCH */ break;
           case 'N': parser->method = HTTP_NOTIFY; break;
           case 'O': parser->method = HTTP_OPTIONS; break;
           case 'P': parser->method = HTTP_POST;
-            /* or PROPFIND|PROPPATCH|PUT|PATCH|PURGE */
+            /* or PROPFIND|PROPPATCH|PUT|PATCH|PURGE|PLAY|PAUSE */
             break;
-          case 'R': parser->method = HTTP_REPORT; break;
-          case 'S': parser->method = HTTP_SUBSCRIBE; /* or SEARCH */ break;
-          case 'T': parser->method = HTTP_TRACE; break;
+          case 'R': parser->method = HTTP_REPORT; /* or REDIRECT, RECORD */ break;
+          case 'S': parser->method = HTTP_SUBSCRIBE; /* or SEARCH, SETUP, SET_PARAMETER */ break;
+          case 'T': parser->method = HTTP_TRACE; /* or TEARDOWN */ break;
           case 'U': parser->method = HTTP_UNLOCK; /* or UNSUBSCRIBE */ break;
           default:
             SET_ERRNO(HPE_INVALID_METHOD);
@@ -938,6 +940,10 @@ size_t http_parser_execute (http_parser *parser,
           } else {
             goto error;
           }
+        } else if (parser->index == 2 && parser->method == HTTP_DELETE && ch == 'S') {
+          parser->method = HTTP_DESCRIBE;
+        } else if (parser->index == 3 && parser->method == HTTP_GET && ch == '_') {
+          parser->method = HTTP_GET_PARAMETER;
         } else if (parser->method == HTTP_MKCOL) {
           if (parser->index == 1 && ch == 'O') {
             parser->method = HTTP_MOVE;
@@ -952,7 +958,13 @@ size_t http_parser_execute (http_parser *parser,
           }
         } else if (parser->method == HTTP_SUBSCRIBE) {
           if (parser->index == 1 && ch == 'E') {
-            parser->method = HTTP_SEARCH;
+            parser->method = HTTP_SEARCH; /* or HTTP_SETUP or HTTP_SET_PARAMETER */
+          } else {
+            goto error;
+          }
+        } else if (parser->method == HTTP_TRACE) {
+          if (parser->index == 1 && ch == 'E') {
+            parser->method = HTTP_TEARDOWN;
           } else {
             goto error;
           }
@@ -962,16 +974,30 @@ size_t http_parser_execute (http_parser *parser,
           } else if (ch == 'U') {
             parser->method = HTTP_PUT; /* or HTTP_PURGE */
           } else if (ch == 'A') {
-            parser->method = HTTP_PATCH;
+            parser->method = HTTP_PATCH; /* or HTTP_PAUSE */
+          } else if (ch == 'L') {
+            parser->method = HTTP_PLAY;
           } else {
             goto error;
           }
         } else if (parser->index == 2) {
           if (parser->method == HTTP_PUT) {
             if (ch == 'R') parser->method = HTTP_PURGE;
+          } else if (parser->method == HTTP_PATCH) {
+            if (ch == 'U') parser->method = HTTP_PAUSE;
+          } else if (parser->method == HTTP_REPORT && ch == 'D') {
+            parser->method = HTTP_REDIRECT;
+          } else if (parser->method == HTTP_REPORT && ch == 'C') {
+            parser->method = HTTP_RECORD;
+          } else if (parser->method == HTTP_SEARCH) {
+            if (ch == 'T') parser->method = HTTP_SETUP; /* or HTTP_SET_PARAMETER */
           } else if (parser->method == HTTP_UNLOCK) {
             if (ch == 'S') parser->method = HTTP_UNSUBSCRIBE;
+          } else {
+            goto error;
           }
+        } else if (parser->index == 3 && parser->method == HTTP_SETUP && ch == '_') {
+          parser->method = HTTP_SET_PARAMETER;
         } else if (parser->index == 4 && parser->method == HTTP_PROPFIND && ch == 'P') {
           parser->method = HTTP_PROPPATCH;
         } else {
@@ -1059,6 +1085,7 @@ size_t http_parser_execute (http_parser *parser,
       case s_req_http_start:
         switch (ch) {
           case 'H':
+          case 'R':
             parser->state = s_req_http_H;
             break;
           case ' ':
