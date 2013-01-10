@@ -930,22 +930,23 @@ reexecute:
         parser->method = (enum http_method) 0;
         parser->index = 1;
         switch (ch) {
-          case 'A': parser->method = HTTP_ACL; break;
+          case 'A': parser->method = HTTP_ACL; /* or ANNOUNCE */ break;
           case 'B': parser->method = HTTP_BIND; break;
           case 'C': parser->method = HTTP_CONNECT; /* or COPY, CHECKOUT */ break;
-          case 'D': parser->method = HTTP_DELETE; break;
-          case 'G': parser->method = HTTP_GET; break;
+          case 'D': parser->method = HTTP_DELETE; /* or DESCRIBE */ break;
+          case 'F': parser->method = HTTP_FLUSH; break;
+          case 'G': parser->method = HTTP_GET; /* or GET_PARAMETER */ break;
           case 'H': parser->method = HTTP_HEAD; break;
           case 'L': parser->method = HTTP_LOCK; /* or LINK */ break;
           case 'M': parser->method = HTTP_MKCOL; /* or MOVE, MKACTIVITY, MERGE, M-SEARCH, MKCALENDAR */ break;
           case 'N': parser->method = HTTP_NOTIFY; break;
           case 'O': parser->method = HTTP_OPTIONS; break;
           case 'P': parser->method = HTTP_POST;
-            /* or PROPFIND|PROPPATCH|PUT|PATCH|PURGE */
+            /* or PROPFIND|PROPPATCH|PUT|PATCH|PURGE|PLAY|PAUSE */
             break;
-          case 'R': parser->method = HTTP_REPORT; /* or REBIND */ break;
-          case 'S': parser->method = HTTP_SUBSCRIBE; /* or SEARCH, SOURCE */ break;
-          case 'T': parser->method = HTTP_TRACE; break;
+          case 'R': parser->method = HTTP_REPORT; /* or REBIND, REDIRECT, RECORD */ break;
+          case 'S': parser->method = HTTP_SUBSCRIBE; /* or SEARCH, SETUP, SET_PARAMETER, SOURCE */ break;
+          case 'T': parser->method = HTTP_TRACE; /* or TEARDOWN */ break;
           case 'U': parser->method = HTTP_UNLOCK; /* or UNSUBSCRIBE, UNBIND, UNLINK */ break;
           default:
             SET_ERRNO(HPE_INVALID_METHOD);
@@ -971,17 +972,22 @@ reexecute:
           UPDATE_STATE(s_req_spaces_before_url);
         } else if (ch == matcher[parser->index]) {
           ; /* nada */
-        } else if ((ch >= 'A' && ch <= 'Z') || ch == '-') {
+        } else if ((ch >= 'A' && ch <= 'Z') || ch == '-' || ch == '_') {
 
           switch (parser->method << 16 | parser->index << 8 | ch) {
 #define XX(meth, pos, ch, new_meth) \
             case (HTTP_##meth << 16 | pos << 8 | ch): \
               parser->method = HTTP_##new_meth; break;
 
+            XX(ACL,       1, 'N', ANNOUNCE)
+            XX(DELETE,    2, 'S', DESCRIBE)
+            XX(GET,       3, '_', GET_PARAMETER)
             XX(POST,      1, 'U', PUT)
             XX(POST,      1, 'A', PATCH)
             XX(POST,      1, 'R', PROPFIND)
+            XX(POST,      1, 'L', PLAY)
             XX(PUT,       2, 'R', PURGE)
+            XX(PATCH,     2, 'U', PAUSE)
             XX(CONNECT,   1, 'H', CHECKOUT)
             XX(CONNECT,   2, 'P', COPY)
             XX(MKCOL,     1, 'O', MOVE)
@@ -991,7 +997,12 @@ reexecute:
             XX(MKCOL,     3, 'A', MKCALENDAR)
             XX(SUBSCRIBE, 1, 'E', SEARCH)
             XX(SUBSCRIBE, 1, 'O', SOURCE)
+            XX(SEARCH,    2, 'T', SETUP)
+            XX(SETUP,     3, '_', SET_PARAMETER)
+            XX(TRACE,     1, 'E', TEARDOWN)
             XX(REPORT,    2, 'B', REBIND)
+            XX(REPORT,    2, 'C', RECORD)
+            XX(REPORT,    2, 'D', REDIRECT)
             XX(PROPFIND,  4, 'P', PROPPATCH)
             XX(LOCK,      1, 'I', LINK)
             XX(UNLOCK,    2, 'S', UNSUBSCRIBE)
@@ -1087,6 +1098,7 @@ reexecute:
       case s_req_http_start:
         switch (ch) {
           case 'H':
+          case 'R':
             UPDATE_STATE(s_req_http_H);
             break;
           case ' ':

@@ -49,7 +49,7 @@ typedef unsigned __int64 uint64_t;
  * faster
  */
 #ifndef HTTP_PARSER_STRICT
-# define HTTP_PARSER_STRICT 1
+# define HTTP_PARSER_STRICT 0
 #endif
 
 /* Maximium header size allowed. If the macro is not defined
@@ -203,6 +203,19 @@ enum http_status
   XX(32, UNLINK,      UNLINK)       \
   /* icecast */                     \
   XX(33, SOURCE,      SOURCE)       \
+  /* RFC-2326 (RTSP) */             \
+  XX(34, DESCRIBE,    DESCRIBE)     \
+  XX(35, ANNOUNCE,    ANNOUNCE)     \
+  XX(36, SETUP,       SETUP)        \
+  XX(37, PLAY,        PLAY)         \
+  XX(38, PAUSE,       PAUSE)        \
+  XX(39, TEARDOWN,    TEARDOWN)     \
+  XX(40, GET_PARAMETER, GET_PARAMETER) \
+  XX(41, SET_PARAMETER, SET_PARAMETER) \
+  XX(42, REDIRECT,    REDIRECT)     \
+  XX(43, RECORD,      RECORD)       \
+  /* RAOP */                        \
+  XX(44, FLUSH,       FLUSH)        \
 
 enum http_method
   {
