@@ -311,6 +311,8 @@ httpd_thread(void *arg)
 					logger_log(httpd->logger, LOGGER_INFO, "Didn't get response");
 				}
 				http_response_destroy(response);
+			} else {
+				logger_log(httpd->logger, LOGGER_DEBUG, "Request not complete, waiting for more data...");
 			}
 		}
 	}
