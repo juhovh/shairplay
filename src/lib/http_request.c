@@ -134,7 +134,7 @@ on_message_complete(http_parser *parser)
 }
 
 http_request_t *
-http_request_init(int numerichost)
+http_request_init(void)
 {
 	http_request_t *request;
 
@@ -142,7 +142,7 @@ http_request_init(int numerichost)
 	if (!request) {
 		return NULL;
 	}
-	http_parser_init(&request->parser, HTTP_REQUEST, !!numerichost);
+	http_parser_init(&request->parser, HTTP_REQUEST);
 	request->parser.data = request;
 
 	request->parser_settings.on_url = &on_url;

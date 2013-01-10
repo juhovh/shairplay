@@ -390,7 +390,7 @@ raop_init(int max_clients, raop_callbacks_t *callbacks, const char *pemkey, int 
 	httpd_cbs.conn_destroy = &conn_destroy;
 
 	/* Initialize the http daemon */
-	httpd = httpd_init(raop->logger, &httpd_cbs, max_clients, 1);
+	httpd = httpd_init(raop->logger, &httpd_cbs, max_clients);
 	if (!httpd) {
 		free(raop);
 		return NULL;

@@ -18,7 +18,7 @@
 typedef struct http_request_s http_request_t;
 
 
-http_request_t *http_request_init(int numerichost);
+http_request_t *http_request_init(void);
 
 int http_request_add_data(http_request_t *request, const char *data, int datalen);
 int http_request_is_complete(http_request_t *request);

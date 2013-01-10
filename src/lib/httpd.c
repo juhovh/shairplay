@@ -36,8 +36,6 @@ struct httpd_s {
 	logger_t *logger;
 	httpd_callbacks_t callbacks;
 
-	int use_rtsp;
-
 	int max_connections;
 	int open_connections;
 	http_connection_t *connections;
@@ -54,7 +52,7 @@ struct httpd_s {
 };
 
 httpd_t *
-httpd_init(logger_t *logger, httpd_callbacks_t *callbacks, int max_connections, int use_rtsp)
+httpd_init(logger_t *logger, httpd_callbacks_t *callbacks, int max_connections)
 {
 	httpd_t *httpd;
 
@@ -68,7 +66,6 @@ httpd_init(logger_t *logger, httpd_callbacks_t *callbacks, int max_connections, 
 		return NULL;
 	}
 
-	httpd->use_rtsp = !!use_rtsp;
 	httpd->max_connections = max_connections;
 	httpd->connections = calloc(max_connections, sizeof(http_connection_t));
 	if (!httpd->connections) {
@@ -260,7 +257,7 @@ httpd_thread(void *arg)
 
 			/* If not in the middle of request, allocate one */
 			if (!connection->request) {
-				connection->request = http_request_init(httpd->use_rtsp);
+				connection->request = http_request_init();
 				assert(connection->request);
 			}
 
