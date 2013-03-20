@@ -31,7 +31,7 @@ public:
     explicit MainApplication(QObject *parent = 0);
     ~MainApplication();
 
-    void start();
+    bool start();
     void stop();
 
 private:
@@ -48,7 +48,6 @@ signals:
 
 public slots:
     void aboutToQuit();
-
 };
 
 #endif // MAINAPPLICATION_H

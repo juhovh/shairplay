@@ -38,7 +38,10 @@ int main(int argc, char *argv[])
     MainApplication m;
     QObject::connect(&m, SIGNAL(quitRequested()), &a, SLOT(quit()));
     QObject::connect(&a, SIGNAL(aboutToQuit()), &m, SLOT(aboutToQuit()));
-    m.start();
 
-    return a.exec();
+    if(m.start()) {
+        return a.exec();
+    } else {
+        return EXIT_FAILURE;
+    }
 }
