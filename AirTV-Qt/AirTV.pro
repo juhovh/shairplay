@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui multimedia phonon svg
+QT       += core gui phonon svg
 
 include(qtsingleapplication/src/qtsingleapplication.pri)
 
@@ -21,8 +21,8 @@ macx {
     QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.5
 }
 
-LIBS += -lshairplay
-INCLUDEPATH += ../src/include/ ../src/bindings/qt4/
+LIBS += -lshairplay -lQtMultimediaKit
+INCLUDEPATH += ../src/include/ ../src/bindings/qt4/ /usr/include/QtMultimediaKit /usr/include/QtMobility
 SOURCES += main.cpp\
     ../src/bindings/qt4/raopservice.cpp \
     ../src/bindings/qt4/raopcallbackhandler.cpp \
