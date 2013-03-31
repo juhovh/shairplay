@@ -229,6 +229,9 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 				conn->raop_rtp = NULL;
 			}
 			conn->raop_rtp = raop_rtp_init(raop->logger, &raop->callbacks, remotestr, rtpmapstr, fmtpstr, aeskey, aesiv);
+			if (!conn->raop_rtp) {
+				logger_log(conn->raop->logger, LOGGER_ERR, "Error initializing the audio decoder");
+			}
 			sdp_destroy(sdp);
 		}
 	} else if (!strcmp(method, "SETUP")) {
@@ -266,7 +269,11 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 			}
 			free(original);
 		}
-		raop_rtp_start(conn->raop_rtp, use_udp, remote_cport, remote_tport, &cport, &tport, &dport);
+		if (conn->raop_rtp) {
+			raop_rtp_start(conn->raop_rtp, use_udp, remote_cport, remote_tport, &cport, &tport, &dport);
+		} else {
+			logger_log(conn->raop->logger, LOGGER_CRIT, "RAOP not initialized at SETUP, playing will fail!");
+		}
 
 		memset(buffer, 0, sizeof(buffer));
 		if (use_udp) {
@@ -298,14 +305,24 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 					sscanf(datastr+8, "%f", &vol);
 					raop_rtp_set_volume(conn->raop_rtp, vol);
 				}
+			} else if (!conn->raop_rtp) {
+				logger_log(conn->raop->logger, LOGGER_WARNING, "RAOP not initialized at SET_PARAMETER volume");
 			}
 			free(datastr);
 		} else if (!strcmp(content_type, "image/jpeg")) {
 			logger_log(conn->raop->logger, LOGGER_INFO, "Got image data of %d bytes", datalen);
-			raop_rtp_set_coverart(conn->raop_rtp, data, datalen);
+			if (conn->raop_rtp) {
+				raop_rtp_set_coverart(conn->raop_rtp, data, datalen);
+			} else {
+				logger_log(conn->raop->logger, LOGGER_WARNING, "RAOP not initialized at SET_PARAMETER coverart");
+			}
 		} else if (!strcmp(content_type, "application/x-dmap-tagged")) {
 			logger_log(conn->raop->logger, LOGGER_INFO, "Got metadata of %d bytes", datalen);
-			raop_rtp_set_metadata(conn->raop_rtp, data, datalen);
+			if (conn->raop_rtp) {
+				raop_rtp_set_metadata(conn->raop_rtp, data, datalen);
+			} else {
+				logger_log(conn->raop->logger, LOGGER_WARNING, "RAOP not initialized at SET_PARAMETER metadata");
+			}
 		}
 	} else if (!strcmp(method, "FLUSH")) {
 		const char *rtpinfo;
@@ -320,6 +337,8 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 		}
 		if (conn->raop_rtp) {
 			raop_rtp_flush(conn->raop_rtp, next_seq);
+		} else {
+			logger_log(conn->raop->logger, LOGGER_WARNING, "RAOP not initialized at FLUSH");
 		}
 	} else if (!strcmp(method, "TEARDOWN")) {
 		http_response_add_header(res, "Connection", "close");
