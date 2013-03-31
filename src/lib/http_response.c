@@ -22,6 +22,7 @@
 
 struct http_response_s {
 	int complete;
+	int disconnect;
 
 	char *data;
 	int data_size;
@@ -134,6 +135,22 @@ http_response_finish(http_response_t *response, const char *data, int datalen)
 		http_response_add_data(response, "\r\n", 2);
 	}
 	response->complete = 1;
+}
+
+void
+http_response_set_disconnect(http_response_t *response, int disconnect)
+{
+	assert(response);
+
+	response->disconnect = !!disconnect;
+}
+
+int
+http_response_get_disconnect(http_response_t *response)
+{
+	assert(response);
+
+	return response->disconnect;
 }
 
 const char *

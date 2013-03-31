@@ -22,6 +22,9 @@ http_response_t *http_response_init(const char *protocol, int code, const char *
 void http_response_add_header(http_response_t *response, const char *name, const char *value);
 void http_response_finish(http_response_t *response, const char *data, int datalen);
 
+void http_response_set_disconnect(http_response_t *response, int disconnect);
+int http_response_get_disconnect(http_response_t *response);
+
 const char *http_response_get_data(http_response_t *response, int *datalen);
 
 void http_response_destroy(http_response_t *response);

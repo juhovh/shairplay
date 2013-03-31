@@ -304,6 +304,11 @@ httpd_thread(void *arg)
 						}
 						written += ret;
 					}
+
+					if (http_response_get_disconnect(response)) {
+						logger_log(httpd->logger, LOGGER_INFO, "Disconnecting on software request");
+						httpd_remove_connection(httpd, connection);
+					}
 				} else {
 					logger_log(httpd->logger, LOGGER_INFO, "Didn't get response");
 				}

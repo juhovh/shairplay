@@ -231,6 +231,7 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 			conn->raop_rtp = raop_rtp_init(raop->logger, &raop->callbacks, remotestr, rtpmapstr, fmtpstr, aeskey, aesiv);
 			if (!conn->raop_rtp) {
 				logger_log(conn->raop->logger, LOGGER_ERR, "Error initializing the audio decoder");
+				http_response_set_disconnect(res, 1);
 			}
 			sdp_destroy(sdp);
 		}
@@ -272,7 +273,8 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 		if (conn->raop_rtp) {
 			raop_rtp_start(conn->raop_rtp, use_udp, remote_cport, remote_tport, &cport, &tport, &dport);
 		} else {
-			logger_log(conn->raop->logger, LOGGER_CRIT, "RAOP not initialized at SETUP, playing will fail!");
+			logger_log(conn->raop->logger, LOGGER_ERR, "RAOP not initialized at SETUP, playing will fail!");
+			http_response_set_disconnect(res, 1);
 		}
 
 		memset(buffer, 0, sizeof(buffer));
@@ -351,7 +353,7 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 	}
 	http_response_finish(res, NULL, 0);
 
-	logger_log(conn->raop->logger, LOGGER_DEBUG, "Got request %s with URL %s", method, http_request_get_url(request));
+	logger_log(conn->raop->logger, LOGGER_DEBUG, "Handled request %s with URL %s", method, http_request_get_url(request));
 	*response = res;
 }
 
