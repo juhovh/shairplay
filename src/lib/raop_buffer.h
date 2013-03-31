@@ -34,7 +34,8 @@ typedef struct {
 
 typedef int (*raop_resend_cb_t)(void *opaque, unsigned short seqno, unsigned short count);
 
-raop_buffer_t *raop_buffer_init(const char *fmtp,
+raop_buffer_t *raop_buffer_init(const char *rtpmap,
+                                const char *fmtp,
                                 const unsigned char *aeskey,
                                 const unsigned char *aesiv);
 

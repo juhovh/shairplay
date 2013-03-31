@@ -146,7 +146,8 @@ set_decoder_info(alac_file *alac, ALACSpecificConfig *config)
 }
 
 raop_buffer_t *
-raop_buffer_init(const char *fmtp,
+raop_buffer_init(const char *rtpmap,
+                 const char *fmtp,
                  const unsigned char *aeskey,
                  const unsigned char *aesiv)
 {
@@ -155,6 +156,7 @@ raop_buffer_init(const char *fmtp,
 	ALACSpecificConfig *alacConfig;
 	int i;
 
+        assert(rtpmap);
 	assert(fmtp);
 	assert(aeskey);
 	assert(aesiv);

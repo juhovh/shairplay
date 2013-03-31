@@ -203,15 +203,17 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 		data = http_request_get_data(request, &datalen);
 		if (data) {
 			sdp_t *sdp;
-			const char *remotestr, *fmtpstr, *aeskeystr, *aesivstr;
+			const char *remotestr, *rtpmapstr, *fmtpstr, *aeskeystr, *aesivstr;
 
 			sdp = sdp_init(data, datalen);
 			remotestr = sdp_get_connection(sdp);
+			rtpmapstr = sdp_get_rtpmap(sdp);
 			fmtpstr = sdp_get_fmtp(sdp);
 			aeskeystr = sdp_get_rsaaeskey(sdp);
 			aesivstr = sdp_get_aesiv(sdp);
 
 			logger_log(conn->raop->logger, LOGGER_DEBUG, "connection: %s", remotestr);
+			logger_log(conn->raop->logger, LOGGER_DEBUG, "rtpmap: %s", rtpmapstr);
 			logger_log(conn->raop->logger, LOGGER_DEBUG, "fmtp: %s", fmtpstr);
 			logger_log(conn->raop->logger, LOGGER_DEBUG, "rsaaeskey: %s", aeskeystr);
 			logger_log(conn->raop->logger, LOGGER_DEBUG, "aesiv: %s", aesivstr);
@@ -226,7 +228,7 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 				raop_rtp_destroy(conn->raop_rtp);
 				conn->raop_rtp = NULL;
 			}
-			conn->raop_rtp = raop_rtp_init(raop->logger, &raop->callbacks, remotestr, fmtpstr, aeskey, aesiv);
+			conn->raop_rtp = raop_rtp_init(raop->logger, &raop->callbacks, remotestr, rtpmapstr, fmtpstr, aeskey, aesiv);
 			sdp_destroy(sdp);
 		}
 	} else if (!strcmp(method, "SETUP")) {
