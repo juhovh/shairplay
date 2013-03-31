@@ -75,9 +75,9 @@ parse_sdp_line(sdp_t *sdp, char *line)
 			if (!value) break;
 			*(value++) = '\0';
 
-			if (!strcmp(key, "rtpmap")) {
+			if (!strcmp(key, "rtpmap") && !sdp->rtpmap) {
 				sdp->rtpmap = value;
-			} else if (!strcmp(key, "fmtp")) {
+			} else if (!strcmp(key, "fmtp") && !sdp->fmtp) {
 				sdp->fmtp = value;
 			} else if (!strcmp(key, "rsaaeskey")) {
 				sdp->rsaaeskey = value;
