@@ -1,3 +1,14 @@
+Shairplay
+=========
+Free portable AirPlay server implementation.
+
+Disclaimer
+----------
+All the resources in this repository are written using only freely available
+information from the internet. The code and related resources are meant for
+educational purposes only. It is up to the user to make sure all local laws are
+adhered to.
+
 Licenses
 --------
 
