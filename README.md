@@ -9,21 +9,11 @@ information from the internet. The code and related resources are meant for
 educational purposes only. It is up to the user to make sure all local laws are
 adhered to.
 
-Licenses
---------
+Related software
+----------------
 
-Following licenses apply:
-
-src/lib/alac/*         - MIT License
-src/lib/crypto/*       - New BSD License
-src/lib/http_parser.*  - MIT License
-src/lib/bindings/*     - MIT License
-src/lib/*              - LGPLv2.1+ License
-AirTV-Qt/*             - LGPLv2.1+ License
-
-Also the following files are used, although not necessary:
-
-AirTV-Qt/qtsingleapplication/src/* - New BSD License
+* [ShairPort](https://github.com/abrasive/shairport), original AirPort Express emulator
+* [ALAC](http://craz.net/programs/itunes/alac.html), ALAC decoder by David Hammerton
 
 Description
 -----------
