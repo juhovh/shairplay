@@ -1,6 +1,8 @@
 Shairplay
 =========
-Free portable AirPlay server implementation.
+Free portable AirPlay server implementation similar to [ShairPort](https://github.com/abrasive/shairport).
+
+Currently only AirPort Express emulation is supported.
 
 Disclaimer
 ----------
@@ -20,6 +22,7 @@ Description
 
 Short description about what each file in the main library does:
 
+```
 src/lib/base64.*         - base64 encoder/decoder
 src/lib/dnssd.*          - dnssd helper functions
 src/lib/http_parser.*    - HTTP parser from joyent (nginx fork)
@@ -35,12 +38,15 @@ src/lib/rsakey.*         - Decrypts and parses the RSA key to bigints
 src/lib/rsapem.*         - Converts the RSA PEM key to DER encoded bytes
 src/lib/sdp.*            - Extremely simple RAOP specific SDP parser
 src/lib/utils.*          - Utils for reading a file and handling strings
+```
 
 Short description about what each file in the Qt application does:
 
+```
 AirTV-Qt/main.cpp                 - Initializes the application
 AirTV-Qt/mainapplication.cpp      - Creates the tray icon and starts RAOP
 AirTV-Qt/raopservice.cpp          - Handles all communication with the library
 AirTV-Qt/raopcallbackhandler.cpp  - Converts C callbacks to Qt callbacks
 AirTV-Qt/audiooutput.cpp          - Takes care of the actual audio output
+```
 
