@@ -309,7 +309,7 @@ main(int argc, char *argv[])
 		fprintf(stderr, "------------------------------------------\n");
 		fprintf(stderr, "You could try the following resolutions based on your OS:\n");
 		fprintf(stderr, "Windows: Try installing http://support.apple.com/kb/DL999\n");
-		fprintf(stderr, "Debian/Ubuntu: Try installing libavahi-compat-libdnssd1 package\n");
+		fprintf(stderr, "Debian/Ubuntu: Try installing libavahi-compat-libdnssd-dev package\n");
 		raop_destroy(raop);
 		return -1;
 	}
