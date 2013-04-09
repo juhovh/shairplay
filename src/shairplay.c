@@ -37,6 +37,9 @@ typedef struct {
 } shairplay_session_t;
 
 
+static int running;
+
+
 static ao_device *
 audio_open_device(shairplay_options_t *opt, int bits, int channels, int samplerate)
 {
@@ -283,11 +286,14 @@ main(int argc, char *argv[])
 	dnssd_register_raop(dnssd, options.apname, options.port, hwaddr, sizeof(hwaddr), 0);
 	dnssd_register_airplay(dnssd, options.apname, 1234, hwaddr, sizeof(hwaddr));
 
+	running = 1;
+	while (running) {
 #ifndef WIN32
-	sleep(100);
+		sleep(1);
 #else
-	Sleep(100*1000);
+		Sleep(1000);
 #endif
+	}
 
 	dnssd_unregister_raop(dnssd);
 	dnssd_destroy(dnssd);
