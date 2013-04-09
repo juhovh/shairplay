@@ -6,7 +6,7 @@
 #include <assert.h>
 
 #ifdef WIN32
-#include <windows.h>
+# include <windows.h>
 #endif
 
 #include <shairplay/dnssd.h>
@@ -35,6 +35,36 @@ typedef struct {
 
 	float volume;
 } shairplay_session_t;
+
+
+static int running;
+
+#ifndef WIN32
+
+#include <signal.h>
+static void
+signal_handler(int sig)
+{
+	switch (sig) {
+	case SIGINT:
+	case SIGTERM:
+		running = 0;
+		break;
+	}
+}
+static void
+init_signals(void)
+{
+	struct sigaction sigact;
+
+	sigact.sa_handler = signal_handler;
+	sigemptyset(&sigact.sa_mask);
+	sigact.sa_flags = 0;
+	sigaction(SIGINT, &sigact, NULL);
+	sigaction(SIGTERM, &sigact, NULL);
+}
+
+#endif
 
 
 static ao_device *
@@ -233,6 +263,12 @@ main(int argc, char *argv[])
 	raop_t *raop;
 	raop_callbacks_t raop_cbs;
 
+	int error;
+
+#ifndef WIN32
+	init_signals();
+#endif
+
 	memset(&options, 0, sizeof(options));
 	if (parse_options(&options, argc, argv)) {
 		return 0;
@@ -266,14 +302,28 @@ main(int argc, char *argv[])
 	raop_set_log_level(raop, RAOP_LOG_DEBUG);
 	raop_start(raop, &options.port, hwaddr, sizeof(hwaddr), NULL);
 
-	dnssd = dnssd_init(NULL);
+	error = 0;
+	dnssd = dnssd_init(&error);
+	if (error) {
+		fprintf(stderr, "ERROR: Could not initialize dnssd library!\n");
+		fprintf(stderr, "------------------------------------------\n");
+		fprintf(stderr, "You could try the following resolutions based on your OS:\n");
+		fprintf(stderr, "Windows: Try installing http://support.apple.com/kb/DL999\n");
+		fprintf(stderr, "Debian/Ubuntu: Try installing libavahi-compat-libdnssd1 package\n");
+		raop_destroy(raop);
+		return -1;
+	}
+
 	dnssd_register_raop(dnssd, options.apname, options.port, hwaddr, sizeof(hwaddr), 0);
 
+	running = 1;
+	while (running) {
 #ifndef WIN32
-	sleep(100);
+		sleep(1);
 #else
-	Sleep(100*1000);
+		Sleep(1000);
 #endif
+	}
 
 	dnssd_unregister_raop(dnssd);
 	dnssd_destroy(dnssd);

@@ -1,13 +1,48 @@
 Shairplay
 =========
-Free portable AirPlay server implementation.
+Free portable AirPlay server implementation similar to [ShairPort](https://github.com/abrasive/shairport).
+
+Currently only AirPort Express emulation is supported.
 
 Disclaimer
 ----------
 All the resources in this repository are written using only freely available
 information from the internet. The code and related resources are meant for
-educational purposes only. It is up to the user to make sure all local laws are
-adhered to.
+educational purposes only. It is the responsibility of the user to make sure
+all local laws are adhered to.
+
+Installation
+------------
+
+```
+./configure
+make
+sudo make install
+```
+
+Notice that libao is required in order to install the shairplay binary,
+otherwise only the library is compiled and installed.
+
+Usage
+-----
+
+Check available options with ```shairplay --help```:
+
+```
+Usage: shairplay [OPTION...]
+
+  -a, --apname=AirPort            Sets Airport name
+  -p, --password=secret           Sets password
+  -o, --server_port=5000          Sets port for RAOP service
+      --ao_driver=driver          Sets the ao driver (optional)
+      --ao_devicename=devicename  Sets the ao device name (optional)
+      --ao_deviceid=id            Sets the ao device id (optional)
+  -h, --help                      This help
+```
+
+Start the server with ```shairplay```, if you are connected to a Wi-Fi the
+server should show as an AirPort Express on your iOS devices and Mac OS X
+computers in the same network.
 
 Related software
 ----------------
@@ -20,6 +55,7 @@ Description
 
 Short description about what each file in the main library does:
 
+```
 src/lib/base64.*         - base64 encoder/decoder
 src/lib/dnssd.*          - dnssd helper functions
 src/lib/http_parser.*    - HTTP parser from joyent (nginx fork)
@@ -35,12 +71,15 @@ src/lib/rsakey.*         - Decrypts and parses the RSA key to bigints
 src/lib/rsapem.*         - Converts the RSA PEM key to DER encoded bytes
 src/lib/sdp.*            - Extremely simple RAOP specific SDP parser
 src/lib/utils.*          - Utils for reading a file and handling strings
+```
 
 Short description about what each file in the Qt application does:
 
+```
 AirTV-Qt/main.cpp                 - Initializes the application
 AirTV-Qt/mainapplication.cpp      - Creates the tray icon and starts RAOP
 AirTV-Qt/raopservice.cpp          - Handles all communication with the library
 AirTV-Qt/raopcallbackhandler.cpp  - Converts C callbacks to Qt callbacks
 AirTV-Qt/audiooutput.cpp          - Takes care of the actual audio output
+```
 
