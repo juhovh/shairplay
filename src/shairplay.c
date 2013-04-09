@@ -16,6 +16,10 @@
 
 #include "config.h"
 
+#ifdef HAVE_DLFCN_H
+# include <dlfcn.h>
+#endif
+
 typedef struct {
 	char apname[56];
 	char password[56];
@@ -306,6 +310,10 @@ main(int argc, char *argv[])
 	dnssd = dnssd_init(&error);
 	if (error) {
 		fprintf(stderr, "ERROR: Could not initialize dnssd library!\n");
+#ifdef HAVE_DLERROR
+		if (error == DNSSD_ERROR_LIBNOTFOUND)
+			fprintf(stderr, "%s\n", dlerror());
+#endif
 		fprintf(stderr, "------------------------------------------\n");
 		fprintf(stderr, "You could try the following resolutions based on your OS:\n");
 		fprintf(stderr, "Windows: Try installing http://support.apple.com/kb/DL999\n");

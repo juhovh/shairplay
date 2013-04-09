@@ -157,7 +157,7 @@ dnssd_init(int *error)
 		return NULL;
 	}
 #elif USE_LIBDL
-	dnssd->module = dlopen("libdns_sd.so", RTLD_LAZY);
+	dnssd->module = dlopen("libdns_sd.so.1", RTLD_LAZY);
 	if (!dnssd->module) {
 		if (error) *error = DNSSD_ERROR_LIBNOTFOUND;
 		free(dnssd);
