@@ -26,9 +26,23 @@ otherwise only the library is compiled and installed.
 Usage
 -----
 
-Check available options with ```shairplay --help``` and start server with
-```shairplay```, if you are connected to a Wi-Fi the server should show as an
-AirPort Express on your iOS devices and Mac OS X computers in the same network.
+Check available options with ```shairplay --help```:
+
+```
+Usage: shairplay [OPTION...]
+
+  -a, --apname=AirPort            Sets Airport name
+  -p, --password=secret           Sets password
+  -o, --server_port=5000          Sets port for RAOP service
+      --ao_driver=driver          Sets the ao driver (optional)
+      --ao_devicename=devicename  Sets the ao device name (optional)
+      --ao_deviceid=id            Sets the ao device id (optional)
+  -h, --help                      This help
+```
+
+Start the server with ```shairplay```, if you are connected to a Wi-Fi the
+server should show as an AirPort Express on your iOS devices and Mac OS X
+computers in the same network.
 
 Related software
 ----------------
