@@ -70,11 +70,7 @@ AM_CONDITIONAL([OS_FREEBSD],[test "$os_freebsd" = "yes"])
 PKG_CHECK_MODULES([libao], [ao >= 1.1.0], [HAVE_LIBAO=1], [HAVE_LIBAO=0])
 AM_CONDITIONAL([USE_LIBAO], [test "$HAVE_LIBAO" -eq 1])
 
-# Check for libdns_sd shared library from the avahi package 
-if test x"$os_linux" = xyes
-then
-AC_CHECK_LIB([dns_sd],[DNSServiceRegister],,AC_MSG_ERROR("libdns_sd is required. Maybe install libavahi-compat-libdnssd-dev package"))
-fi
+
 
 AC_CONFIG_FILES(
 	[Makefile]
