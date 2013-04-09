@@ -6,7 +6,7 @@
 #include <assert.h>
 
 #ifdef WIN32
-#include <windows.h>
+# include <windows.h>
 #endif
 
 #include <shairplay/dnssd.h>
@@ -38,6 +38,33 @@ typedef struct {
 
 
 static int running;
+
+#ifndef WIN32
+
+#include <signal.h>
+static void
+signal_handler(int sig)
+{
+	switch (sig) {
+	case SIGINT:
+	case SIGTERM:
+		running = 0;
+		break;
+	}
+}
+static void
+init_signals(void)
+{
+	struct sigaction sigact;
+
+	sigact.sa_handler = signal_handler;
+	sigemptyset(&sigact.sa_mask);
+	sigact.sa_flags = 0;
+	sigaction(SIGINT, &sigact, NULL);
+	sigaction(SIGTERM, &sigact, NULL);
+}
+
+#endif
 
 
 static ao_device *
@@ -237,6 +264,10 @@ main(int argc, char *argv[])
 	raop_callbacks_t raop_cbs;
 
 	int error;
+
+#ifndef WIN32
+	init_signals();
+#endif
 
 	memset(&options, 0, sizeof(options));
 	if (parse_options(&options, argc, argv)) {
