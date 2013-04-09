@@ -233,6 +233,8 @@ main(int argc, char *argv[])
 	raop_t *raop;
 	raop_callbacks_t raop_cbs;
 
+	int error;
+
 	memset(&options, 0, sizeof(options));
 	if (parse_options(&options, argc, argv)) {
 		return 0;
@@ -266,8 +268,20 @@ main(int argc, char *argv[])
 	raop_set_log_level(raop, RAOP_LOG_DEBUG);
 	raop_start(raop, &options.port, hwaddr, sizeof(hwaddr), NULL);
 
-	dnssd = dnssd_init(NULL);
+	error = 0;
+	dnssd = dnssd_init(&error);
+	if (error) {
+		fprintf(stderr, "ERROR: Could not initialize dnssd library!\n");
+		fprintf(stderr, "------------------------------------------\n");
+		fprintf(stderr, "You could try the following resolutions based on your OS:\n");
+		fprintf(stderr, "Windows: Try installing http://support.apple.com/kb/DL999\n");
+		fprintf(stderr, "Debian/Ubuntu: Try installing libavahi-compat-libdnssd1 package\n");
+		raop_destroy(raop);
+		return -1;
+	}
+
 	dnssd_register_raop(dnssd, options.apname, options.port, hwaddr, sizeof(hwaddr), 0);
+	dnssd_register_airplay(dnssd, options.apname, 1234, hwaddr, sizeof(hwaddr));
 
 #ifndef WIN32
 	sleep(100);
