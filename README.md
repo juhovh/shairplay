@@ -8,8 +8,27 @@ Disclaimer
 ----------
 All the resources in this repository are written using only freely available
 information from the internet. The code and related resources are meant for
-educational purposes only. It is up to the user to make sure all local laws are
-adhered to.
+educational purposes only. It is the responsibility of the user to make sure
+all local laws are adhered to.
+
+Installation
+------------
+
+```
+./configure
+make
+sudo make install
+```
+
+Notice that libao is required in order to install the shairplay binary,
+otherwise only the library is compiled and installed.
+
+Usage
+-----
+
+Check available options with ```shairplay --help``` and start server with
+```shairplay```, if you are connected to a Wi-Fi the server should show as an
+AirPort Express on your iOS devices and Mac OS X computers in the same network.
 
 Related software
 ----------------
