@@ -66,9 +66,15 @@ AM_CONDITIONAL([OS_LINUX],[test "$os_linux" = "yes"])
 AM_CONDITIONAL([OS_GNU],[test "$os_gnu" = "yes"])
 AM_CONDITIONAL([OS_FREEBSD],[test "$os_freebsd" = "yes"])
 
-# Custom check for libao
+# Check libraries used by shairplay binary
+AC_CHECK_FUNC([DNSServiceRegister], [have_dnssd=1], [have_dnssd=0])
+PKG_CHECK_MODULES([avahi], [avahi-client >= 0.6.0], [have_avahi=1], [have_avahi=0])
 PKG_CHECK_MODULES([libao], [ao >= 1.1.0], [have_libao=1], [have_libao=0])
-AM_CONDITIONAL([HAVE_LIBAO], [test "$have_libao" -eq 1])
+
+# Set WITH_SHAIRPLAY is the binary can be compiled
+if test "$os_win32" = "yes" -o $have_dnssd -eq 1 -o "$have_avahi" -eq 1; then have_mdns=yes; fi
+AM_CONDITIONAL([WITH_SHAIRPLAY], [test "$have_mdns" = "yes" -a "$have_libao" -eq 1])
+AM_CONDITIONAL([HAVE_AVAHI], [test "$have_avahi" -eq 1])
 
 
 
