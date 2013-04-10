@@ -2,7 +2,7 @@ SUBDIRS = lib
 
 AM_CPPFLAGS = -I$(top_srcdir)/include
 
-if USE_LIBAO
+if HAVE_LIBAO
   bin_PROGRAMS = shairplay
   shairplay_SOURCES = shairplay.c
   shairplay_LDADD = lib/libshairplay.la

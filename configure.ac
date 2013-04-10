@@ -67,8 +67,8 @@ AM_CONDITIONAL([OS_GNU],[test "$os_gnu" = "yes"])
 AM_CONDITIONAL([OS_FREEBSD],[test "$os_freebsd" = "yes"])
 
 # Custom check for libao
-PKG_CHECK_MODULES([libao], [ao >= 1.1.0], [HAVE_LIBAO=1], [HAVE_LIBAO=0])
-AM_CONDITIONAL([USE_LIBAO], [test "$HAVE_LIBAO" -eq 1])
+PKG_CHECK_MODULES([libao], [ao >= 1.1.0], [have_libao=1], [have_libao=0])
+AM_CONDITIONAL([HAVE_LIBAO], [test "$have_libao" -eq 1])
 
 
 
