@@ -24,7 +24,7 @@ AC_HEADER_STDC
 # Checks for library functions.
 AC_CHECK_LIB([socket],[connect])
 AC_CHECK_LIB([pthread],[pthread_create])
-
+AC_CHECK_LIB([avahi-client],[avahi_client_new])
 
 # Custom check for os, similar to webkit
 AC_MSG_CHECKING([for native Win32])

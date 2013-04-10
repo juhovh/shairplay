@@ -25,6 +25,10 @@
 #include "compat.h"
 #include "utils.h"
 
+
+#include <avahi-client/publish.h>
+#include <avahi-common/simple-watch.h>
+
 #define MAX_DEVICEID 18
 #define MAX_SERVNAME 256
 
@@ -116,6 +120,9 @@ struct dnssd_s {
 
 	DNSServiceRef raopService;
 	DNSServiceRef airplayService;
+	AvahiClient *avclient;
+	AvahiSimplePoll *avsimplepoll;
+	AvahiEntryGroup *avgroup;
 };
 
 
@@ -132,6 +139,17 @@ dnssd_init(int *error)
 		if (error) *error = DNSSD_ERROR_OUTOFMEM;
 		return NULL;
 	}
+
+	dnssd->avsimplepoll = avahi_simple_poll_new();
+	if (!dnssd->avsimplepoll) {
+		return NULL;
+	}
+	dnssd->avclient = avahi_client_new(avahi_simple_poll_get(dnssd->avsimplepoll), 0, NULL, NULL, error);
+	if (!dnssd->avclient) {
+		return NULL;
+	}
+
+	return dnssd;
 
 #ifdef WIN32
 	dnssd->module = LoadLibraryA("dnssd.dll");
@@ -215,6 +233,37 @@ dnssd_register_raop(dnssd_t *dnssd, const char *name, unsigned short port, const
 	assert(dnssd);
 	assert(name);
 	assert(hwaddr);
+	if (!(dnssd->avgroup = avahi_entry_group_new(dnssd->avclient, NULL, NULL)))
+		return -1;
+
+	/* Convert hardware address to string */
+	ret = utils_hwaddr_raop(servname, sizeof(servname), hwaddr, hwaddrlen);
+	if (ret < 0) {
+		/* FIXME: handle better */
+		return -1;
+	}
+
+	/* Check that we have bytes for 'hw@name' format */
+	if (sizeof(servname) < strlen(servname)+1+strlen(name)+1) {
+		/* FIXME: handle better */
+		return -2;
+	}
+
+	strncat(servname, "@", sizeof(servname)-strlen(servname)-1);
+	strncat(servname, name, sizeof(servname)-strlen(servname)-1);
+
+
+	if ((ret = avahi_entry_group_add_service(dnssd->avgroup, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC,\
+		0, servname, "_raop._tcp", NULL, NULL, port,\
+		"txtvers=1","ch=2", "cn=0,1", "et=0,1", "sv=false", \
+		"da=true", "sr=44100", "ss=16", "pw=false",
+		"vn=3", "tp=TCP,UDP", "md=0,1,2", "vs=130.14", "sm=false", "ek=1", NULL)) < 0)
+		return -3;
+
+	if ((ret = avahi_entry_group_commit(dnssd->avgroup)) < 0)
+		return -4;
+
+	return 0;
 
 	dnssd->TXTRecordCreate(&txtRecord, 0, NULL);
 	dnssd->TXTRecordSetValue(&txtRecord, "txtvers", strlen(RAOP_TXTVERS), RAOP_TXTVERS);
@@ -236,22 +285,6 @@ dnssd_register_raop(dnssd_t *dnssd, const char *name, unsigned short port, const
 	dnssd->TXTRecordSetValue(&txtRecord, "vs", strlen(GLOBAL_VERSION), GLOBAL_VERSION);
 	dnssd->TXTRecordSetValue(&txtRecord, "sm", strlen(RAOP_SM), RAOP_SM);
 	dnssd->TXTRecordSetValue(&txtRecord, "ek", strlen(RAOP_EK), RAOP_EK);
-
-	/* Convert hardware address to string */
-	ret = utils_hwaddr_raop(servname, sizeof(servname), hwaddr, hwaddrlen);
-	if (ret < 0) {
-		/* FIXME: handle better */
-		return -1;
-	}
-
-	/* Check that we have bytes for 'hw@name' format */
-	if (sizeof(servname) < strlen(servname)+1+strlen(name)+1) {
-		/* FIXME: handle better */
-		return -2;
-	}
-
-	strncat(servname, "@", sizeof(servname)-strlen(servname)-1);
-	strncat(servname, name, sizeof(servname)-strlen(servname)-1);
 
 	/* Register the service */
 	dnssd->DNSServiceRegister(&dnssd->raopService, 0, 0,
