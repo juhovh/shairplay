@@ -16,10 +16,6 @@
 
 #include "config.h"
 
-#ifdef HAVE_DLFCN_H
-# include <dlfcn.h>
-#endif
-
 typedef struct {
 	char apname[56];
 	char password[56];
@@ -310,19 +306,14 @@ main(int argc, char *argv[])
 	dnssd = dnssd_init(&error);
 	if (error) {
 		fprintf(stderr, "ERROR: Could not initialize dnssd library!\n");
-#ifdef HAVE_DLERROR
-		if (error == DNSSD_ERROR_LIBNOTFOUND)
-			fprintf(stderr, "%s\n", dlerror());
-#endif
 		fprintf(stderr, "------------------------------------------\n");
-		fprintf(stderr, "You could try the following resolutions based on your OS:\n");
 		fprintf(stderr, "Windows: Try installing http://support.apple.com/kb/DL999\n");
-		fprintf(stderr, "Debian/Ubuntu: Try installing libavahi-compat-libdnssd1 package\n");
 		raop_destroy(raop);
 		return -1;
 	}
 
 	dnssd_register_raop(dnssd, options.apname, options.port, hwaddr, sizeof(hwaddr), 0);
+	dnssd_register_airplay(dnssd, "AppleTV", 7000, "012345", 6);
 
 	running = 1;
 	while (running) {

@@ -19,33 +19,31 @@
 
 #include "config.h"
 
-#include "dnssd.h"
+#include "shairplay/dnssd.h"
 #include "dnssdint.h"
-#include "global.h"
-#include "compat.h"
-#include "utils.h"
 
+#if defined(WIN32)
+#include <ws2tcpip.h>
+#include <windows.h>
+#else
+#include <arpa/inet.h>
+#endif
 
 #include <avahi-client/publish.h>
 #include <avahi-common/simple-watch.h>
 
+#define MAX_HWADDR_LEN 6
 #define MAX_DEVICEID 18
 #define MAX_SERVNAME 256
 
-#define USE_LIBDL (defined(HAVE_LIBDL) && !defined(__APPLE__))
-
-#if defined(WIN32) || USE_LIBDL
-# ifdef WIN32
+#ifndef HAVE_LIBAVAHI_CLIENT
+#ifdef WIN32
 #  include <stdint.h>
 #  if !defined(EFI32) && !defined(EFI64)
 #   define DNSSD_STDCALL __stdcall
 #  else
 #   define DNSSD_STDCALL
 #  endif
-# else
-#  include <dlfcn.h>
-#  define DNSSD_STDCALL
-# endif
 
 typedef struct _DNSServiceRef_t *DNSServiceRef;
 typedef union _TXTRecordRef_t { char PrivateData[16]; char *ForceNaturalAlignment; } TXTRecordRef;
@@ -101,13 +99,17 @@ typedef DNSServiceErrorType (DNSSD_STDCALL *TXTRecordSetValue_t)
     );
 typedef uint16_t (DNSSD_STDCALL *TXTRecordGetLength_t)(const TXTRecordRef *txtRecord);
 typedef const void * (DNSSD_STDCALL *TXTRecordGetBytesPtr_t)(const TXTRecordRef *txtRecord);
-
+#endif // HAVE_LIBAVAHI_CLIENT
 
 struct dnssd_s {
+#ifdef HAVE_LIBAVAHI_CLIENT
+	AvahiClient *avclient;
+	AvahiSimplePoll *avsimplepoll;
+	AvahiEntryGroup *raopService;
+	AvahiEntryGroup *airplayService;
+#else
 #ifdef WIN32
 	HMODULE module;
-#elif USE_LIBDL
-	void *module;
 #endif
 
 	DNSServiceRegister_t       DNSServiceRegister;
@@ -120,12 +122,62 @@ struct dnssd_s {
 
 	DNSServiceRef raopService;
 	DNSServiceRef airplayService;
-	AvahiClient *avclient;
-	AvahiSimplePoll *avsimplepoll;
-	AvahiEntryGroup *avgroup;
+#endif
 };
 
 
+int
+utils_hwaddr_raop(char *str, int strlen, const char *hwaddr, int hwaddrlen)
+{
+	int i,j;
+
+	/* Check that our string is long enough */
+	if (strlen == 0 || strlen < 2*hwaddrlen+1)
+		return -1;
+
+	/* Convert hardware address to hex string */
+	for (i=0,j=0; i<hwaddrlen; i++) {
+		int hi = (hwaddr[i]>>4) & 0x0f;
+		int lo = hwaddr[i] & 0x0f;
+
+		if (hi < 10) str[j++] = '0' + hi;
+		else         str[j++] = 'A' + hi-10;
+		if (lo < 10) str[j++] = '0' + lo;
+		else         str[j++] = 'A' + lo-10;
+	}
+
+	/* Add string terminator */
+	str[j++] = '\0';
+	return j;
+}
+
+int
+utils_hwaddr_airplay(char *str, int strlen, const char *hwaddr, int hwaddrlen)
+{
+	int i,j;
+
+	/* Check that our string is long enough */
+	if (strlen == 0 || strlen < 2*hwaddrlen+hwaddrlen)
+		return -1;
+
+	/* Convert hardware address to hex string */
+	for (i=0,j=0; i<hwaddrlen; i++) {
+		int hi = (hwaddr[i]>>4) & 0x0f;
+		int lo = hwaddr[i] & 0x0f;
+
+		if (hi < 10) str[j++] = '0' + hi;
+		else         str[j++] = 'a' + hi-10;
+		if (lo < 10) str[j++] = '0' + lo;
+		else         str[j++] = 'a' + lo-10;
+
+		str[j++] = ':';
+	}
+
+	/* Add string terminator */
+	if (j != 0) j--;
+	str[j++] = '\0';
+	return j;
+}
 
 dnssd_t *
 dnssd_init(int *error)
@@ -140,18 +192,17 @@ dnssd_init(int *error)
 		return NULL;
 	}
 
+#ifdef HAVE_LIBAVAHI_CLIENT
 	dnssd->avsimplepoll = avahi_simple_poll_new();
 	if (!dnssd->avsimplepoll) {
 		return NULL;
 	}
 	dnssd->avclient = avahi_client_new(avahi_simple_poll_get(dnssd->avsimplepoll), 0, NULL, NULL, error);
 	if (!dnssd->avclient) {
+		avahi_simple_poll_free(dnssd->avsimplepoll);
 		return NULL;
 	}
-
-	return dnssd;
-
-#ifdef WIN32
+#elif defined(WIN32)
 	dnssd->module = LoadLibraryA("dnssd.dll");
 	if (!dnssd->module) {
 		if (error) *error = DNSSD_ERROR_LIBNOTFOUND;
@@ -174,30 +225,7 @@ dnssd_init(int *error)
 		free(dnssd);
 		return NULL;
 	}
-#elif USE_LIBDL
-	dnssd->module = dlopen("libdns_sd.so.1", RTLD_LAZY);
-	if (!dnssd->module) {
-		if (error) *error = DNSSD_ERROR_LIBNOTFOUND;
-		free(dnssd);
-		return NULL;
-	}
-	dnssd->DNSServiceRegister = (DNSServiceRegister_t)dlsym(dnssd->module, "DNSServiceRegister");
-	dnssd->DNSServiceRefDeallocate = (DNSServiceRefDeallocate_t)dlsym(dnssd->module, "DNSServiceRefDeallocate");
-	dnssd->TXTRecordCreate = (TXTRecordCreate_t)dlsym(dnssd->module, "TXTRecordCreate");
-	dnssd->TXTRecordSetValue = (TXTRecordSetValue_t)dlsym(dnssd->module, "TXTRecordSetValue");
-	dnssd->TXTRecordGetLength = (TXTRecordGetLength_t)dlsym(dnssd->module, "TXTRecordGetLength");
-	dnssd->TXTRecordGetBytesPtr = (TXTRecordGetBytesPtr_t)dlsym(dnssd->module, "TXTRecordGetBytesPtr");
-	dnssd->TXTRecordDeallocate = (TXTRecordDeallocate_t)dlsym(dnssd->module, "TXTRecordDeallocate");
-
-	if (!dnssd->DNSServiceRegister || !dnssd->DNSServiceRefDeallocate || !dnssd->TXTRecordCreate ||
-	    !dnssd->TXTRecordSetValue || !dnssd->TXTRecordGetLength || !dnssd->TXTRecordGetBytesPtr ||
-	    !dnssd->TXTRecordDeallocate) {
-		if (error) *error = DNSSD_ERROR_PROCNOTFOUND;
-		dlclose(dnssd->module);
-		free(dnssd);
-		return NULL;
-	}
-#else
+#else /* MAC */
 	dnssd->DNSServiceRegister = &DNSServiceRegister;
 	dnssd->DNSServiceRefDeallocate = &DNSServiceRefDeallocate;
 	dnssd->TXTRecordCreate = &TXTRecordCreate;
@@ -214,10 +242,12 @@ void
 dnssd_destroy(dnssd_t *dnssd)
 {
 	if (dnssd) {
+#ifdef HAVE_LIBAVAHI_CLIENT
+		avahi_client_free(dnssd->avclient);
+		avahi_simple_poll_free(dnssd->avsimplepoll);
+#endif
 #ifdef WIN32
 		FreeLibrary(dnssd->module);
-#elif USE_LIBDL
-		dlclose(dnssd->module);
 #endif
 		free(dnssd);
 	}
@@ -226,15 +256,15 @@ dnssd_destroy(dnssd_t *dnssd)
 int
 dnssd_register_raop(dnssd_t *dnssd, const char *name, unsigned short port, const char *hwaddr, int hwaddrlen, int password)
 {
+#ifndef HAVE_LIBAVAHI_CLIENT
 	TXTRecordRef txtRecord;
+#endif
 	char servname[MAX_SERVNAME];
 	int ret;
 
 	assert(dnssd);
 	assert(name);
 	assert(hwaddr);
-	if (!(dnssd->avgroup = avahi_entry_group_new(dnssd->avclient, NULL, NULL)))
-		return -1;
 
 	/* Convert hardware address to string */
 	ret = utils_hwaddr_raop(servname, sizeof(servname), hwaddr, hwaddrlen);
@@ -252,19 +282,20 @@ dnssd_register_raop(dnssd_t *dnssd, const char *name, unsigned short port, const
 	strncat(servname, "@", sizeof(servname)-strlen(servname)-1);
 	strncat(servname, name, sizeof(servname)-strlen(servname)-1);
 
+#ifdef HAVE_LIBAVAHI_CLIENT
+	if (!(dnssd->raopService = avahi_entry_group_new(dnssd->avclient, NULL, NULL)))
+		return -1;
 
-	if ((ret = avahi_entry_group_add_service(dnssd->avgroup, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC,\
+	if ((ret = avahi_entry_group_add_service(dnssd->raopService, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC,\
 		0, servname, "_raop._tcp", NULL, NULL, port,\
 		"txtvers=1","ch=2", "cn=0,1", "et=0,1", "sv=false", \
 		"da=true", "sr=44100", "ss=16", "pw=false",
 		"vn=3", "tp=TCP,UDP", "md=0,1,2", "vs=130.14", "sm=false", "ek=1", NULL)) < 0)
 		return -3;
 
-	if ((ret = avahi_entry_group_commit(dnssd->avgroup)) < 0)
+	if ((ret = avahi_entry_group_commit(dnssd->raopService)) < 0)
 		return -4;
-
-	return 0;
-
+#else
 	dnssd->TXTRecordCreate(&txtRecord, 0, NULL);
 	dnssd->TXTRecordSetValue(&txtRecord, "txtvers", strlen(RAOP_TXTVERS), RAOP_TXTVERS);
 	dnssd->TXTRecordSetValue(&txtRecord, "ch", strlen(RAOP_CH), RAOP_CH);
@@ -297,13 +328,16 @@ dnssd_register_raop(dnssd_t *dnssd, const char *name, unsigned short port, const
 
 	/* Deallocate TXT record */
 	dnssd->TXTRecordDeallocate(&txtRecord);
+#endif
 	return 1;
 }
 
 int
 dnssd_register_airplay(dnssd_t *dnssd, const char *name, unsigned short port, const char *hwaddr, int hwaddrlen)
 {
+#ifndef HAVE_LIBAVAHI_CLIENT
 	TXTRecordRef txtRecord;
+#endif
 	char deviceid[3*MAX_HWADDR_LEN];
 	char features[16];
 	int ret;
@@ -322,6 +356,9 @@ dnssd_register_airplay(dnssd_t *dnssd, const char *name, unsigned short port, co
 	features[sizeof(features)-1] = '\0';
 	snprintf(features, sizeof(features)-1, "0x%x", GLOBAL_FEATURES);
 
+#ifdef HAVE_LIBAVAHI_CLIENT
+	/* Todo */
+#else
 	dnssd->TXTRecordCreate(&txtRecord, 0, NULL);
 	dnssd->TXTRecordSetValue(&txtRecord, "deviceid", strlen(deviceid), deviceid);
 	dnssd->TXTRecordSetValue(&txtRecord, "features", strlen(features), features);
@@ -338,6 +375,7 @@ dnssd_register_airplay(dnssd_t *dnssd, const char *name, unsigned short port, co
 
 	/* Deallocate TXT record */
 	dnssd->TXTRecordDeallocate(&txtRecord);
+#endif
 	return 0;
 }
 
@@ -349,8 +387,11 @@ dnssd_unregister_raop(dnssd_t *dnssd)
 	if (!dnssd->raopService) {
 		return;
 	}
-
+#ifdef HAVE_LIBAVAHI_CLIENT
+	avahi_entry_group_free(dnssd->raopService);
+#else
 	dnssd->DNSServiceRefDeallocate(dnssd->raopService);
+#endif
 	dnssd->raopService = NULL;
 }
 
@@ -362,7 +403,10 @@ dnssd_unregister_airplay(dnssd_t *dnssd)
 	if (!dnssd->airplayService) {
 		return;
 	}
-
+#ifdef HAVE_LIBAVAHI_CLIENT
+	avahi_entry_group_free(dnssd->airplayService);
+#else
 	dnssd->DNSServiceRefDeallocate(dnssd->airplayService);
+#endif
 	dnssd->airplayService = NULL;
 }

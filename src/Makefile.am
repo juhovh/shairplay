@@ -4,7 +4,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/include
 
 if USE_LIBAO
 bin_PROGRAMS = shairplay
-shairplay_SOURCES = shairplay.c
+shairplay_SOURCES = shairplay.c dnssd.c dnssdint.h
 shairplay_LDADD = lib/libshairplay.la
 shairplay_CFLAGS =
 shairplay_LDFLAGS = -static-libtool-libs

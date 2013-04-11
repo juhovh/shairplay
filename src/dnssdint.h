@@ -15,4 +15,8 @@
 #define RAOP_SM "false"
 #define RAOP_EK "1"
 
+#define GLOBAL_FEATURES 0x7
+#define GLOBAL_MODEL    "AppleTV2,1"
+#define GLOBAL_VERSION  "130.14"
+
 #endif
