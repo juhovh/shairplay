@@ -313,7 +313,6 @@ main(int argc, char *argv[])
 	}
 
 	dnssd_register_raop(dnssd, options.apname, options.port, hwaddr, sizeof(hwaddr), 0);
-	dnssd_register_airplay(dnssd, "AppleTV", 7000, "012345", 6);
 
 	running = 1;
 	while (running) {
