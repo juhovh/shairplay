@@ -288,13 +288,17 @@ dnssd_register_raop(dnssd_t *dnssd, const char *name, unsigned short port, const
 
 	if ((ret = avahi_entry_group_add_service(dnssd->raopService, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC,\
 		0, servname, "_raop._tcp", NULL, NULL, port,\
-		"txtvers=1","ch=2", "cn=0,1", "et=0,1", "sv=false", \
-		"da=true", "sr=44100", "ss=16", "pw=false",
-		"vn=3", "tp=TCP,UDP", "md=0,1,2", "vs=130.14", "sm=false", "ek=1", NULL)) < 0)
+		"txtvers=" RAOP_TXTVERS,"ch=" RAOP_CH, "cn=" RAOP_CN, "et=" RAOP_ET, "sv=" RAOP_SV, \
+		"da=" RAOP_DA, "sr=" RAOP_SR, "ss=" RAOP_SS, (password?"pw=true":"pw=false"),
+		"vn=" RAOP_VN, "tp=" RAOP_TP, "md=" RAOP_MD, "vs=" GLOBAL_VERSION, "sm=" RAOP_SM, "ek=" RAOP_EK, NULL)) < 0) {
+		avahi_entry_group_free(dnssd->raopService);
 		return -3;
+	}
 
-	if ((ret = avahi_entry_group_commit(dnssd->raopService)) < 0)
+	if ((ret = avahi_entry_group_commit(dnssd->raopService)) < 0){
+		avahi_entry_group_free(dnssd->raopService);
 		return -4;
+	}
 #else
 	dnssd->TXTRecordCreate(&txtRecord, 0, NULL);
 	dnssd->TXTRecordSetValue(&txtRecord, "txtvers", strlen(RAOP_TXTVERS), RAOP_TXTVERS);
@@ -339,7 +343,7 @@ dnssd_register_airplay(dnssd_t *dnssd, const char *name, unsigned short port, co
 	TXTRecordRef txtRecord;
 #endif
 	char deviceid[3*MAX_HWADDR_LEN];
-	char features[16];
+	char deviceidlong[64];
 	int ret;
 
 	assert(dnssd);
@@ -353,15 +357,27 @@ dnssd_register_airplay(dnssd_t *dnssd, const char *name, unsigned short port, co
 		return -1;
 	}
 
-	features[sizeof(features)-1] = '\0';
-	snprintf(features, sizeof(features)-1, "0x%x", GLOBAL_FEATURES);
-
 #ifdef HAVE_LIBAVAHI_CLIENT
-	/* Todo */
+	snprintf(deviceidlong, sizeof(deviceidlong)-1,"deviceid=%s",deviceid);
+	if (!(dnssd->airplayService = avahi_entry_group_new(dnssd->avclient, NULL, NULL)))
+		return -1;
+
+	if ((ret = avahi_entry_group_add_service(dnssd->airplayService, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC,\
+		0, name, "_airplay._tcp", NULL, NULL, port,
+		deviceidlong,"features=" GLOBAL_FEATURES,"model=" GLOBAL_MODEL, NULL)) < 0) {
+		avahi_entry_group_free(dnssd->airplayService);
+		return -3;
+	}
+
+	if ((ret = avahi_entry_group_commit(dnssd->airplayService)) < 0){
+		avahi_entry_group_free(dnssd->airplayService);
+		return -4;
+	}
+
 #else
 	dnssd->TXTRecordCreate(&txtRecord, 0, NULL);
 	dnssd->TXTRecordSetValue(&txtRecord, "deviceid", strlen(deviceid), deviceid);
-	dnssd->TXTRecordSetValue(&txtRecord, "features", strlen(features), features);
+	dnssd->TXTRecordSetValue(&txtRecord, "features", strlen(features), GLOBAL_FEATURES);
 	dnssd->TXTRecordSetValue(&txtRecord, "model", strlen(GLOBAL_MODEL), GLOBAL_MODEL);
 
 	/* Register the service */
