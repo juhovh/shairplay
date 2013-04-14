@@ -285,6 +285,7 @@ main(int argc, char *argv[])
 	dnssd_t *dnssd;
 	raop_t *raop;
 	raop_callbacks_t raop_cbs;
+	char *password = NULL;
 
 	int error;
 
@@ -322,8 +323,11 @@ main(int argc, char *argv[])
 		return -1;
 	}
 
+	if (strlen(options.password)) {
+		password = options.password;
+	}
 	raop_set_log_level(raop, RAOP_LOG_DEBUG);
-	raop_start(raop, &options.port, hwaddr, sizeof(hwaddr), NULL);
+	raop_start(raop, &options.port, hwaddr, sizeof(hwaddr), password);
 
 	error = 0;
 	dnssd = dnssd_init(&error);
