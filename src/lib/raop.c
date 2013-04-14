@@ -167,8 +167,9 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 			res = http_response_init("RTSP/1.0", 401, "Unauthorized");
 			http_response_add_header(res, "WWW-Authenticate", authstr);
 			free(authstr);
+			logger_log(conn->raop->logger, LOGGER_DEBUG, "Authentication unsuccessful, sending Unauthorized");
 		} else {
-			logger_log(conn->raop->logger, LOGGER_DEBUG, "AUTHENTICATION SUCCESS!");
+			logger_log(conn->raop->logger, LOGGER_DEBUG, "Authentication successful!");
 		}
 	}
 
