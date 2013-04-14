@@ -226,7 +226,8 @@ parse_options(shairplay_options_t *opt, int argc, char *argv[])
 	char *path = argv[0];
 	char *arg;
 
-	strcpy(opt->apname, "Shairplay");
+	/* Set default values for apname and port */
+	strncpy(opt->apname, "Shairplay", sizeof(opt->apname)-1);
 	opt->port = 5000;
 
 	while ((arg = *++argv)) {
@@ -264,13 +265,6 @@ parse_options(shairplay_options_t *opt, int argc, char *argv[])
 		}
 	}
 
-	/* Set default values for apname and port */
-	if (!strlen(opt->apname)) {
-		strncpy(opt->apname, "Shairplay", sizeof(opt->apname)-1);
-	}
-	if (!opt->port) {
-		opt->port = 5000;
-	}
 	return 0;
 }
 
