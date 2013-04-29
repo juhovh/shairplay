@@ -14,7 +14,15 @@ all local laws are adhered to.
 Installation
 ------------
 
+First you need to install some dependencies, for example on Ubuntu you would
+write:
 ```
+sudo apt-get install autoconf automake libtool
+sudo apt-get install libao-dev libavahi-compat-libdnssd-dev
+```
+
+```
+./autogen.sh
 ./configure
 make
 sudo make install
