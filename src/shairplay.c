@@ -106,7 +106,6 @@ audio_open_device(shairplay_options_t *opt, int bits, int channels, int samplera
 	}
 
 	/* Add all available libao options */
-	ao_append_option(&ao_options, "client_name", opt->apname);
 	if (strlen(opt->ao_devicename)) {
 		ao_append_option(&ao_options, "dev", opt->ao_devicename);
 	}
