@@ -95,7 +95,6 @@ static int
 parse_hwaddr(const char *str, char *hwaddr, int hwaddrlen)
 {
 	int slen, i;
-	char *ptr, *endptr;
 
 	slen = 3*hwaddrlen-1;
 	if (strlen(str) != slen) {
