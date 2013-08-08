@@ -43,6 +43,7 @@ typedef struct {
 	char apname[56];
 	char password[56];
 	unsigned short port;
+	char hwaddr[6];
 
 	char ao_driver[56];
 	char ao_devicename[56];
@@ -89,6 +90,34 @@ init_signals(void)
 
 #endif
 
+
+static int
+parse_hwaddr(const char *str, char *hwaddr, int hwaddrlen)
+{
+	int slen, i;
+	char *ptr, *endptr;
+
+	slen = 3*hwaddrlen-1;
+	if (strlen(str) != slen) {
+		return 1;
+	}
+	for (i=0; i<slen; i++) {
+		if (str[i] == ':' && (i%3 == 2)) {
+			continue;
+		}
+		if (str[i] >= '0' && str[i] <= '9') {
+			continue;
+		}
+		if (str[i] >= 'a' && str[i] <= 'f') {
+			continue;
+		}
+		return 1;
+	}
+	for (i=0; i<hwaddrlen; i++) {
+		hwaddr[i] = (char) strtol(str+(i*3), NULL, 16);
+	}
+	return 0;
+}
 
 static ao_device *
 audio_open_device(shairplay_options_t *opt, int bits, int channels, int samplerate)
@@ -222,12 +251,15 @@ audio_set_volume(void *cls, void *opaque, float volume)
 static int
 parse_options(shairplay_options_t *opt, int argc, char *argv[])
 {
+	const char default_hwaddr[] = { 0x48, 0x5d, 0x60, 0x7c, 0xee, 0x22 };
+
 	char *path = argv[0];
 	char *arg;
 
 	/* Set default values for apname and port */
 	strncpy(opt->apname, "Shairplay", sizeof(opt->apname)-1);
 	opt->port = 5000;
+	memcpy(opt->hwaddr, default_hwaddr, sizeof(opt->hwaddr));
 
 	while ((arg = *++argv)) {
 		if (!strcmp(arg, "-a")) {
@@ -242,6 +274,12 @@ parse_options(shairplay_options_t *opt, int argc, char *argv[])
 			opt->port = atoi(*++argv);
 		} else if (!strncmp(arg, "--server_port=", 14)) {
 			opt->port = atoi(arg+14);
+		} else if (!strncmp(arg, "--hwaddr=", 9)) {
+			if (parse_hwaddr(arg+9, opt->hwaddr, sizeof(opt->hwaddr))) {
+				fprintf(stderr, "Invalid format given for hwaddr, aborting...\n");
+				fprintf(stderr, "Please use hwaddr format: 01:45:89:ab:cd:ef\n");
+				return 1;
+			}
 		} else if (!strncmp(arg, "--ao_driver=", 12)) {
 			strncpy(opt->ao_driver, arg+12, sizeof(opt->ao_driver)-1);
 		} else if (!strncmp(arg, "--ao_devicename=", 16)) {
@@ -270,8 +308,6 @@ parse_options(shairplay_options_t *opt, int argc, char *argv[])
 int
 main(int argc, char *argv[])
 {
-	const char hwaddr[] = { 0x48, 0x5d, 0x60, 0x7c, 0xee, 0x22 };
-
 	shairplay_options_t options;
 	ao_device *device = NULL;
 
@@ -320,7 +356,7 @@ main(int argc, char *argv[])
 		password = options.password;
 	}
 	raop_set_log_level(raop, RAOP_LOG_DEBUG);
-	raop_start(raop, &options.port, hwaddr, sizeof(hwaddr), password);
+	raop_start(raop, &options.port, options.hwaddr, sizeof(options.hwaddr), password);
 
 	error = 0;
 	dnssd = dnssd_init(&error);
@@ -334,7 +370,7 @@ main(int argc, char *argv[])
 		return -1;
 	}
 
-	dnssd_register_raop(dnssd, options.apname, options.port, hwaddr, sizeof(hwaddr), 0);
+	dnssd_register_raop(dnssd, options.apname, options.port, options.hwaddr, sizeof(options.hwaddr), 0);
 
 	running = 1;
 	while (running) {
