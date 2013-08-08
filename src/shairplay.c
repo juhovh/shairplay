@@ -292,6 +292,7 @@ parse_options(shairplay_options_t *opt, int argc, char *argv[])
 			fprintf(stderr, "  -a, --apname=AirPort            Sets Airport name\n");
 			fprintf(stderr, "  -p, --password=secret           Sets password\n");
 			fprintf(stderr, "  -o, --server_port=5000          Sets port for RAOP service\n");
+			fprintf(stderr, "      --hwaddr=address            Sets the MAC address, useful if running multiple instances\n");
 			fprintf(stderr, "      --ao_driver=driver          Sets the ao driver (optional)\n");
 			fprintf(stderr, "      --ao_devicename=devicename  Sets the ao device name (optional)\n");
 			fprintf(stderr, "      --ao_deviceid=id            Sets the ao device id (optional)\n");
