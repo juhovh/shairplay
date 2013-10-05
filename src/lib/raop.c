@@ -312,9 +312,13 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 					float vol = 0.0;
 					sscanf(datastr+8, "%f", &vol);
 					raop_rtp_set_volume(conn->raop_rtp, vol);
+				} else if (!strncmp(datastr, "progress: ", 10)) {
+					unsigned int start, curr, end;
+					sscanf(datastr+10, "%u/%u/%u", &start, &curr, &end);
+					raop_rtp_set_progress(conn->raop_rtp, start, curr, end);
 				}
 			} else if (!conn->raop_rtp) {
-				logger_log(conn->raop->logger, LOGGER_WARNING, "RAOP not initialized at SET_PARAMETER volume");
+				logger_log(conn->raop->logger, LOGGER_WARNING, "RAOP not initialized at SET_PARAMETER");
 			}
 			free(datastr);
 		} else if (!strcmp(content_type, "image/jpeg")) {

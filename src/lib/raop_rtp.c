@@ -50,6 +50,10 @@ struct raop_rtp_s {
 	int metadata_len;
 	unsigned char *coverart;
 	int coverart_len;
+	unsigned int progress_start;
+	unsigned int progress_curr;
+	unsigned int progress_end;
+	int progress_changed;
 
 	int flush;
 	thread_handle_t thread;
@@ -258,6 +262,10 @@ raop_rtp_process_events(raop_rtp_t *raop_rtp, void *cb_data)
 	int metadata_len;
 	unsigned char *coverart;
 	int coverart_len;
+	unsigned int progress_start;
+	unsigned int progress_curr;
+	unsigned int progress_end;
+	int progress_changed;
 
 	assert(raop_rtp);
 
@@ -287,6 +295,14 @@ raop_rtp_process_events(raop_rtp_t *raop_rtp, void *cb_data)
 	coverart_len = raop_rtp->coverart_len;
 	raop_rtp->coverart = NULL;
 	raop_rtp->coverart_len = 0;
+
+	/* Read the progress values */
+	progress_start = raop_rtp->progress_start;
+	progress_curr = raop_rtp->progress_curr;
+	progress_end = raop_rtp->progress_end;
+	progress_changed = raop_rtp->progress_changed;
+	raop_rtp->progress_changed = 0;
+
 	MUTEX_UNLOCK(raop_rtp->run_mutex);
 
 	/* Call set_volume callback if changed */
@@ -303,6 +319,7 @@ raop_rtp_process_events(raop_rtp_t *raop_rtp, void *cb_data)
 			raop_rtp->callbacks.audio_flush(raop_rtp->callbacks.cls, cb_data);
 		}
 	}
+
 	if (metadata != NULL) {
 		if (raop_rtp->callbacks.audio_set_metadata) {
 			raop_rtp->callbacks.audio_set_metadata(raop_rtp->callbacks.cls, cb_data, metadata, metadata_len);
@@ -310,12 +327,19 @@ raop_rtp_process_events(raop_rtp_t *raop_rtp, void *cb_data)
 		free(metadata);
 		metadata = NULL;
 	}
+
 	if (coverart != NULL) {
 		if (raop_rtp->callbacks.audio_set_coverart) {
 			raop_rtp->callbacks.audio_set_coverart(raop_rtp->callbacks.cls, cb_data, coverart, coverart_len);
 		}
 		free(coverart);
 		coverart = NULL;
+	}
+
+	if (progress_changed) {
+		if (raop_rtp->callbacks.audio_set_progress) {
+			raop_rtp->callbacks.audio_set_progress(raop_rtp->callbacks.cls, cb_data, progress_start, progress_curr, progress_end);
+		}
 	}
 	return 0;
 }
@@ -651,6 +675,20 @@ raop_rtp_set_coverart(raop_rtp_t *raop_rtp, const char *data, int datalen)
 	MUTEX_LOCK(raop_rtp->run_mutex);
 	raop_rtp->coverart = coverart;
 	raop_rtp->coverart_len = datalen;
+	MUTEX_UNLOCK(raop_rtp->run_mutex);
+}
+
+void
+raop_rtp_set_progress(raop_rtp_t *raop_rtp, unsigned int start, unsigned int curr, unsigned int end)
+{
+	assert(raop_rtp);
+
+	/* Set progress in thread instead */
+	MUTEX_LOCK(raop_rtp->run_mutex);
+	raop_rtp->progress_start = start;
+	raop_rtp->progress_curr = curr;
+	raop_rtp->progress_end = end;
+	raop_rtp->progress_changed = 1;
 	MUTEX_UNLOCK(raop_rtp->run_mutex);
 }
 
