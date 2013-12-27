@@ -26,4 +26,5 @@ autom4te.cache
 aclocal.m4
 stamp-h1
 src/shairplay
+src/test/example
 
