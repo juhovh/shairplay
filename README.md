@@ -18,7 +18,8 @@ First you need to install some dependencies, for example on Ubuntu you would
 write:
 ```
 sudo apt-get install autoconf automake libtool
-sudo apt-get install libao-dev libavahi-compat-libdnssd-dev
+sudo apt-get install libltdl-dev libao-dev libavahi-compat-libdnssd-dev
+sudo apt-get install avahi-daemon
 ```
 
 ```
