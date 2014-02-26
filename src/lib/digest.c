@@ -141,9 +141,11 @@ digest_is_valid(const char *our_realm, const char *password,
 	}
 
 	if (!username || !realm || !nonce || !uri || !response) {
+		free(auth);
 		return 0;
 	}
 	if (strcmp(realm, our_realm) || strcmp(nonce, our_nonce) || strcmp(uri, our_uri)) {
+		free(auth);
 		return 0;
 	}
 
