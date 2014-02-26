@@ -128,16 +128,17 @@ digest_is_valid(const char *our_realm, const char *password,
 		else *last = '\0';
 
 		/* Store value if it is relevant */
-		if (!strncmp("username=\"", first, 10))
+		if (!strncmp("username=\"", first, 10)) {
 			username = first+10;
-		if (!strncmp("realm=\"", first, 7))
+		} else if (!strncmp("realm=\"", first, 7)) {
 			realm = first+7;
-		if (!strncmp("nonce=\"", first, 7))
+		} else if (!strncmp("nonce=\"", first, 7)) {
 			nonce = first+7;
-		if (!strncmp("uri=\"", first, 5))
+		} else if (!strncmp("uri=\"", first, 5)) {
 			uri = first+5;
-		if (!strncmp("response=\"", first, 10))
+		} else if (!strncmp("response=\"", first, 10)) {
 			response = first+10;
+		}
 	}
 
 	if (!username || !realm || !nonce || !uri || !response) {
