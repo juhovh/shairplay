@@ -140,7 +140,9 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 	}
 
 	res = http_response_init("RTSP/1.0", 200, "OK");
-	if (strcmp(method, "OPTIONS") && strlen(raop->password)) {
+
+	/* We need authorization for everything else than OPTIONS request */
+	if (strcmp(method, "OPTIONS") != 0 && strlen(raop->password)) {
 		const char *authorization;
 
 		authorization = http_request_get_header(request, "Authorization");
