@@ -237,7 +237,8 @@ httpd_thread(void *arg)
 				continue;
 			}
 		}
-		if (httpd->server_fd6 != -1 && FD_ISSET(httpd->server_fd6, &rfds)) {
+		if (httpd->open_connections < httpd->max_connections &&
+		    httpd->server_fd6 != -1 && FD_ISSET(httpd->server_fd6, &rfds)) {
 			ret = httpd_accept_connection(httpd, httpd->server_fd6, 1);
 			if (ret == -1) {
 				break;
