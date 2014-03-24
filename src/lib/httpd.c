@@ -198,8 +198,12 @@ httpd_thread(void *arg)
 		/* Get the correct nfds value and set rfds */
 		FD_ZERO(&rfds);
 		if (httpd->open_connections < httpd->max_connections) {
-			FD_SET(httpd->server_fd4, &rfds);
-			nfds = httpd->server_fd4+1;
+			if (httpd->server_fd4 != -1) {
+				FD_SET(httpd->server_fd4, &rfds);
+				if (nfds <= httpd->server_fd4) {
+					nfds = httpd->server_fd4+1;
+				}
+			}
 			if (httpd->server_fd6 != -1) {
 				FD_SET(httpd->server_fd6, &rfds);
 				if (nfds <= httpd->server_fd6) {
@@ -229,7 +233,8 @@ httpd_thread(void *arg)
 			break;
 		}
 
-		if (FD_ISSET(httpd->server_fd4, &rfds)) {
+		if (httpd->open_connections < httpd->max_connections &&
+		    httpd->server_fd4 != -1 && FD_ISSET(httpd->server_fd4, &rfds)) {
 			ret = httpd_accept_connection(httpd, httpd->server_fd4, 0);
 			if (ret == -1) {
 				break;
@@ -349,6 +354,9 @@ httpd_thread(void *arg)
 int
 httpd_start(httpd_t *httpd, unsigned short *port)
 {
+	/* How many connection attempts are kept in queue */
+	int backlog = 5;
+
 	assert(httpd);
 	assert(port);
 
@@ -370,14 +378,14 @@ httpd_start(httpd_t *httpd, unsigned short *port)
 		logger_log(httpd->logger, LOGGER_WARNING, "Continuing without IPv6 support");
 	}
 
-	if (listen(httpd->server_fd4, 5) == -1) {
+	if (httpd->server_fd4 != -1 && listen(httpd->server_fd4, backlog) == -1) {
 		logger_log(httpd->logger, LOGGER_ERR, "Error listening to IPv4 socket");
 		closesocket(httpd->server_fd4);
 		closesocket(httpd->server_fd6);
 		MUTEX_UNLOCK(httpd->run_mutex);
 		return -2;
 	}
-	if (httpd->server_fd6 != -1 && listen(httpd->server_fd6, 5) == -1) {
+	if (httpd->server_fd6 != -1 && listen(httpd->server_fd6, backlog) == -1) {
 		logger_log(httpd->logger, LOGGER_ERR, "Error listening to IPv6 socket");
 		closesocket(httpd->server_fd4);
 		closesocket(httpd->server_fd6);
