@@ -349,6 +349,7 @@ main(int argc, char *argv[])
 	raop = raop_init_from_keyfile(10, &raop_cbs, "airport.key", NULL);
 	if (raop == NULL) {
 		fprintf(stderr, "Could not initialize the RAOP service\n");
+		fprintf(stderr, "Please make sure the airport.key file is in the current directory.\n");
 		return -1;
 	}
 
