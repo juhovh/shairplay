@@ -25,7 +25,7 @@
 #include "crypto/crypto.h"
 #include "alac/alac.h"
 
-#define RAOP_BUFFER_LENGTH 16
+#define RAOP_BUFFER_LENGTH 32
 
 typedef struct {
 	/* Packet available */
