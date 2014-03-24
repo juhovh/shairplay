@@ -123,6 +123,7 @@ conn_init(void *opaque, unsigned char *local, int locallen, unsigned char *remot
 static void
 conn_request(void *ptr, http_request_t *request, http_response_t **response)
 {
+	const char realm[] = "airplay";
 	raop_conn_t *conn = ptr;
 	raop_t *raop = conn->raop;
 
@@ -139,7 +140,7 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 	}
 
 	res = http_response_init("RTSP/1.0", 200, "OK");
-	if (strlen(raop->password)) {
+	if (strcmp(method, "OPTIONS") && strlen(raop->password)) {
 		const char *authorization;
 
 		authorization = http_request_get_header(request, "Authorization");
@@ -147,17 +148,19 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 			logger_log(conn->raop->logger, LOGGER_DEBUG, "Our nonce: %s", conn->nonce);
 			logger_log(conn->raop->logger, LOGGER_DEBUG, "Authorization: %s", authorization);
 		}
-		if (!digest_is_valid("AppleTV", raop->password, conn->nonce, method, http_request_get_url(request), authorization)) {
+		if (!digest_is_valid(realm, raop->password, conn->nonce, method, http_request_get_url(request), authorization)) {
 			char *authstr;
 			int authstrlen;
 
 			/* Allocate the authenticate string */
-			authstrlen = sizeof("Digest realm=\"AppleTV\", nonce=\"\"") + sizeof(conn->nonce) + 1;
+			authstrlen = sizeof("Digest realm=\"\", nonce=\"\"") + sizeof(realm) + sizeof(conn->nonce) + 1;
 			authstr = malloc(authstrlen);
 
 			/* Concatenate the authenticate string */
 			memset(authstr, 0, authstrlen);
-			strcat(authstr, "Digest realm=\"AppleTV\", nonce=\"");
+			strcat(authstr, "Digest realm=\"");
+			strcat(authstr, realm);
+			strcat(authstr, "\", nonce=\"");
 			strcat(authstr, conn->nonce);
 			strcat(authstr, "\"");
 
