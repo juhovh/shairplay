@@ -53,6 +53,10 @@ Start the server with ```shairplay```, if you are connected to a Wi-Fi the
 server should show as an AirPort Express on your iOS devices and Mac OS X
 computers in the same network.
 
+Notice that you need to have the airport.key file in your working directory when
+starting the shairplay service. It is not included in the binary for possible
+legal reasons.
+
 Related software
 ----------------
 
