@@ -12,6 +12,14 @@
  *  Lesser General Public License for more details.
  */
 
+/* These defines allow us to compile on iOS */
+#ifndef __has_feature
+# define __has_feature(x) 0
+#endif
+#ifndef __has_extension
+# define __has_extension __has_feature
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
