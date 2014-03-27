@@ -311,7 +311,7 @@ raop_buffer_queue(raop_buffer_t *raop_buffer, unsigned char *data, unsigned shor
 }
 
 const void *
-raop_buffer_dequeue(raop_buffer_t *raop_buffer, int *length, int no_resend)
+raop_buffer_dequeue(raop_buffer_t *raop_buffer, int *length, unsigned int *timestamp, int no_resend)
 {
 	short buflen;
 	raop_buffer_entry_t *entry;
@@ -342,6 +342,7 @@ raop_buffer_dequeue(raop_buffer_t *raop_buffer, int *length, int no_resend)
 	if (!entry->available) {
 		/* Return an empty audio buffer to skip audio */
 		*length = entry->audio_buffer_size;
+		*timestamp = entry->timestamp;
 		memset(entry->audio_buffer, 0, *length);
 		return entry->audio_buffer;
 	}
@@ -349,6 +350,7 @@ raop_buffer_dequeue(raop_buffer_t *raop_buffer, int *length, int no_resend)
 
 	/* Return entry audio buffer */
 	*length = entry->audio_buffer_len;
+	*timestamp = entry->timestamp;
 	entry->audio_buffer_len = 0;
 	return entry->audio_buffer;
 }
