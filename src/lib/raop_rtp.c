@@ -25,6 +25,7 @@
 #include "utils.h"
 #include "compat.h"
 #include "logger.h"
+#include "bio.h"
 
 #define NO_FLUSH (-42)
 
@@ -241,12 +242,9 @@ raop_rtp_resend_callback(void *opaque, unsigned short seqnum, unsigned short cou
 	/* Fill the request buffer */
 	packet[0] = 0x80;
 	packet[1] = 0x55|0x80;
-	packet[2] = (ourseqnum >> 8);
-	packet[3] =  ourseqnum;
-	packet[4] = (seqnum >> 8);
-	packet[5] =  seqnum;
-	packet[6] = (count >> 8);
-	packet[7] =  count;
+	bio_set_be_u16(&packet[2], ourseqnum);
+	bio_set_be_u16(&packet[4], seqnum);
+	bio_set_be_u16(&packet[6], count);
 
 	ret = sendto(raop_rtp->csock, (const char *)packet, sizeof(packet), 0, addr, addrlen);
 	if (ret == -1) {

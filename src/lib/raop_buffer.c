@@ -20,6 +20,7 @@
 #include "raop_buffer.h"
 #include "raop_rtp.h"
 #include "utils.h"
+#include "bio.h"
 
 #include <stdint.h>
 #include "crypto/crypto.h"
@@ -118,30 +119,18 @@ set_decoder_info(alac_file *alac, ALACSpecificConfig *config)
 	unsigned char decoder_info[48];
 	memset(decoder_info, 0, sizeof(decoder_info));
 
-#define SET_UINT16(buf, value)do{\
-	(buf)[0] = (unsigned char)((value) >> 8);\
-	(buf)[1] = (unsigned char)(value);\
-	}while(0)
-
-#define SET_UINT32(buf, value)do{\
-	(buf)[0] = (unsigned char)((value) >> 24);\
-	(buf)[1] = (unsigned char)((value) >> 16);\
-	(buf)[2] = (unsigned char)((value) >> 8);\
-	(buf)[3] = (unsigned char)(value);\
-	}while(0)
-
 	/* Construct decoder info buffer */
-	SET_UINT32(&decoder_info[24], config->frameLength);
+	bio_set_be_u32(&decoder_info[24], config->frameLength);
 	decoder_info[28] = config->compatibleVersion;
 	decoder_info[29] = config->bitDepth;
 	decoder_info[30] = config->pb;
 	decoder_info[31] = config->mb;
 	decoder_info[32] = config->kb;
 	decoder_info[33] = config->numChannels;
-	SET_UINT16(&decoder_info[34], config->maxRun);
-	SET_UINT32(&decoder_info[36], config->maxFrameBytes);
-	SET_UINT32(&decoder_info[40], config->avgBitRate);
-	SET_UINT32(&decoder_info[44], config->sampleRate);
+	bio_set_be_u16(&decoder_info[34], config->maxRun);
+	bio_set_be_u32(&decoder_info[36], config->maxFrameBytes);
+	bio_set_be_u32(&decoder_info[40], config->avgBitRate);
+	bio_set_be_u32(&decoder_info[44], config->sampleRate);
 	alac_set_info(alac, (char *) decoder_info);
 }
 
@@ -253,7 +242,7 @@ raop_buffer_queue(raop_buffer_t *raop_buffer, unsigned char *data, unsigned shor
 
 	/* Get correct seqnum for the packet */
 	if (use_seqnum) {
-		seqnum = (data[2] << 8) | data[3];
+		seqnum = bio_get_be_u16(&data[2]);
 	} else {
 		seqnum = raop_buffer->first_seqnum;
 	}
@@ -279,10 +268,8 @@ raop_buffer_queue(raop_buffer_t *raop_buffer, unsigned char *data, unsigned shor
 	entry->flags = data[0];
 	entry->type = data[1];
 	entry->seqnum = seqnum;
-	entry->timestamp = (data[4] << 24) | (data[5] << 16) |
-	                   (data[6] << 8) | data[7];
-	entry->ssrc = (data[8] << 24) | (data[9] << 16) |
-	              (data[10] << 8) | data[11];
+	entry->timestamp = bio_get_be_u32(&data[4]);
+	entry->ssrc = bio_get_be_u32(&data[8]);
 	entry->available = 1;
 
 	/* Decrypt audio data */
