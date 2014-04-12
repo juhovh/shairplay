@@ -456,7 +456,7 @@ raop_rtp_thread_udp(void *arg)
 
 				/* Decode all frames in queue */
 				while ((audiobuf = raop_buffer_dequeue(raop_rtp->buffer, &audiobuflen, &timestamp, no_resend))) {
-					raop_rtp->callbacks.audio_process(raop_rtp->callbacks.cls, cb_data, audiobuf, audiobuflen);
+					raop_rtp->callbacks.audio_process(raop_rtp->callbacks.cls, cb_data, audiobuf, audiobuflen, timestamp);
 				}
 
 				/* Handle possible resend requests */
@@ -583,7 +583,7 @@ raop_rtp_thread_tcp(void *arg)
 
 			/* Decode the received frame */
 			if ((audiobuf = raop_buffer_dequeue(raop_rtp->buffer, &audiobuflen, &timestamp, 1))) {
-				raop_rtp->callbacks.audio_process(raop_rtp->callbacks.cls, cb_data, audiobuf, audiobuflen);
+				raop_rtp->callbacks.audio_process(raop_rtp->callbacks.cls, cb_data, audiobuf, audiobuflen, timestamp);
 			}
 		}
 	}
