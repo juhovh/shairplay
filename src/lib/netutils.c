@@ -78,9 +78,11 @@ netutils_init_socket(unsigned short *port, int use_ipv6, int use_udp)
 		sin6ptr->sin6_addr = in6addr_any;
 		sin6ptr->sin6_port = htons(*port);
 
+#ifndef WIN32
 		/* Make sure we only listen to IPv6 addresses */
 		setsockopt(server_fd, IPPROTO_IPV6, IPV6_V6ONLY,
 		           (char *) &v6only, sizeof(v6only));
+#endif
 
 		socklen = sizeof(*sin6ptr);
 		ret = bind(server_fd, (struct sockaddr *)sin6ptr, socklen);
