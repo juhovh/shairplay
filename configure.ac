@@ -10,6 +10,7 @@ AM_INIT_AUTOMAKE([foreign])
 
 # Checks for programs.
 AC_PROG_CC
+AC_LIBTOOL_WIN32_DLL
 AC_PROG_LIBTOOL
 
 # Checks for libraries.
