@@ -24,6 +24,9 @@
 #define RAOP_NTP_MAXDIST ((1500ull << 32) / 1000u) /* maximum allowed distance */
 #define RAOP_NTP_MAXDISP ((16ull   << 32))         /* maximum dispersion */
 
+#define RAOP_NTP_CLOCK_BASE (2208988800ull << 32)
+
+
 typedef struct raop_ntp_data_s {
 	unsigned long long clock;
 	unsigned long long dispersion;

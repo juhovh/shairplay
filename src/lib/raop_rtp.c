@@ -137,6 +137,18 @@ raop_rtp_parse_remote(raop_rtp_t *raop_rtp, const char *remote)
 	return 0;
 }
 
+static int
+raop_rtp_get_clock_internal(raop_rtp_t *raop_rtp, unsigned long long* clock)
+{
+	if (raop_rtp->callbacks.audio_get_clock) {
+		raop_rtp->callbacks.audio_get_clock(raop_rtp->callbacks.cls, clock);
+		*clock += RAOP_NTP_CLOCK_BASE;
+		return 0;
+	} else {
+		return -1;
+	}
+}
+
 raop_rtp_t *
 raop_rtp_init(logger_t *logger, raop_callbacks_t *callbacks, const char *remote,
               const char *rtpmap, const char *fmtp,
@@ -162,9 +174,7 @@ raop_rtp_init(logger_t *logger, raop_callbacks_t *callbacks, const char *remote,
 		return NULL;
 	}
 
-	if (raop_rtp->callbacks.audio_get_clock) {
-		raop_rtp->callbacks.audio_get_clock(raop_rtp->callbacks.cls, &raop_rtp->ntp_transmit);
-	}
+	raop_rtp_get_clock_internal(raop_rtp, &raop_rtp->ntp_transmit);
 	raop_ntp_init(&raop_rtp->ntp, logger, raop_rtp->ntp_transmit);
 	raop_rtp->ntp_dispersion = RAOP_NTP_MAXDISP;
 
@@ -291,8 +301,10 @@ raop_rtp_request_ntp(raop_rtp_t *raop_rtp)
 		sin->sin_port = htons(raop_rtp->timing_rport);
 	}
 
-	if (raop_rtp->callbacks.audio_get_clock)
-		raop_rtp->callbacks.audio_get_clock(raop_rtp->callbacks.cls, &raop_rtp->ntp_transmit);
+	ret = raop_rtp_get_clock_internal(raop_rtp, &raop_rtp->ntp_transmit);
+	if (ret < 0) {
+		return ret;
+	}
 
 	/* Fill the request buffer */
 	packet[0] = 0x80;
@@ -446,6 +458,7 @@ raop_rtp_thread_udp(void *arg)
 		fd_set rfds;
 		struct timeval tv;
 		int nfds, ret;
+		unsigned long long clock;
 
 		/* Check if we are still running and process callbacks */
 		if (raop_rtp_process_events(raop_rtp, cb_data)) {
@@ -453,9 +466,7 @@ raop_rtp_thread_udp(void *arg)
 		}
 
 		/* Request time every 3 seconds */
-		if (raop_rtp->callbacks.audio_get_clock) {
-			unsigned long long clock;
-			raop_rtp->callbacks.audio_get_clock(raop_rtp->callbacks.cls, &clock);
+		if (raop_rtp_get_clock_internal(raop_rtp, &clock) == 0) {
 			if ((clock - raop_rtp->ntp_transmit) > (3ull << 32)) {
 				raop_rtp_request_ntp(raop_rtp);
 			}
@@ -521,15 +532,13 @@ raop_rtp_thread_udp(void *arg)
 				char type = packet[1] & ~0x80;
 
 				logger_log(raop_rtp->logger, LOGGER_DEBUG, "Got time packet of type 0x%02x", type);
-				if (type == 0x53 && packetlen >= 32 && raop_rtp->callbacks.audio_get_clock) {
+				if (type == 0x53 && packetlen >= 32) {
 					unsigned long long origin   = bio_get_be_u64(&packet[8]);
 					unsigned long long receive  = bio_get_be_u64(&packet[16]);
 					unsigned long long transmit = bio_get_be_u64(&packet[24]);
 					unsigned long long current  = 0u;
 
-					if (raop_rtp->callbacks.audio_get_clock) {
-						raop_rtp->callbacks.audio_get_clock(raop_rtp->callbacks.cls, &current);
-
+					if (raop_rtp_get_clock_internal(raop_rtp, &current) == 0) {
 						raop_ntp_add(&raop_rtp->ntp, origin, receive, transmit, current);
 						raop_ntp_get_offset(&raop_rtp->ntp, current, &raop_rtp->ntp_offset, &raop_rtp->ntp_dispersion);
 					}
