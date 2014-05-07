@@ -517,10 +517,28 @@ raop_rtp_thread_udp(void *arg)
 					assert(ret >= 0);
 				} else if (type == 0x54 && packetlen >= 20) {
 					unsigned int       now_rtp;
-					raop_rtp->sync_rtp = bio_get_be_u32(&packet[4]);
+					raop_rtp->sync_rtp = bio_get_be_u32(&packet[4]) - 11025;
 					raop_rtp->sync_ntp = bio_get_be_u64(&packet[8]);
 					now_rtp            = bio_get_be_u32(&packet[16]);
-					logger_log(raop_rtp->logger, LOGGER_DEBUG, "Got time sync packet 0x%08x, 0x%08x, %u, %d", (unsigned int)raop_rtp->sync_ntp, (unsigned int)(raop_rtp->sync_ntp >> 32), raop_rtp->sync_rtp, (int)(raop_rtp->sync_rtp - now_rtp));
+					logger_log(raop_rtp->logger, LOGGER_DEBUG, "Got time sync packet 0x%08x, 0x%08x, %u, %u", (unsigned int)raop_rtp->sync_ntp, (unsigned int)(raop_rtp->sync_ntp >> 32), raop_rtp->sync_rtp, now_rtp - raop_rtp->sync_rtp);
+					if (raop_rtp->callbacks.audio_sync) {
+						unsigned long long clock;
+						if (raop_rtp->ntp_dispersion < RAOP_NTP_MAXDIST) {
+							raop_rtp->callbacks.audio_sync(raop_rtp->callbacks.cls,
+							                               cb_data,
+							                               raop_rtp->sync_ntp - raop_rtp->ntp_offset - RAOP_NTP_CLOCK_BASE,
+							                               raop_rtp->ntp_dispersion,
+							                               raop_rtp->sync_rtp,
+							                               now_rtp - raop_rtp->sync_rtp);
+						} else if (raop_rtp_get_clock_internal(raop_rtp, &clock) == 0) {
+							raop_rtp->callbacks.audio_sync(raop_rtp->callbacks.cls,
+							                               cb_data,
+							                               clock  - RAOP_NTP_CLOCK_BASE,
+							                               RAOP_NTP_MAXDIST*RAOP_NTP_COUNT,
+							                               raop_rtp->sync_rtp,
+							                               now_rtp - raop_rtp->sync_rtp);
+						}
+					}
 				}
 			}
 		} else if (FD_ISSET(raop_rtp->tsock, &rfds)) {
