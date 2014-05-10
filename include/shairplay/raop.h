@@ -13,7 +13,7 @@ extern "C" {
 
 /* Define version information */
 #define RAOP_VERSION_MAJOR 0
-#define RAOP_VERSION_MINOR 1
+#define RAOP_VERSION_MINOR 2
 #define RAOP_VERSION_MICRO 0
 
 #define RAOP_VERSION_MAKE(major, minor, micro) ( ((major) << 16) \
