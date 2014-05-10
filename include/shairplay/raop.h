@@ -11,6 +11,18 @@
 extern "C" {
 #endif
 
+/* Define version information */
+#define RAOP_VERSION_MAJOR 0
+#define RAOP_VERSION_MINOR 1
+#define RAOP_VERSION_MICRO 0
+
+#define RAOP_VERSION_MAKE(major, minor, micro) ( ((major) << 16) \
+                                               | ((minor) <<  8) \
+                                               | ((micro) <<  0) )
+
+#define RAOP_VERSION_INT RAOP_VERSION_MAKE( RAOP_VERSION_MAJOR \
+                                          , RAOP_VERSION_MINOR \
+                                          , RAOP_VERSION_MICRO )
 
 /* Define syslog style log levels */
 #define RAOP_LOG_EMERG       0       /* system is unusable */
