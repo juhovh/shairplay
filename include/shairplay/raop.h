@@ -52,6 +52,8 @@ struct raop_callbacks_s {
 	void  (*audio_set_volume)(void *cls, void *session, float volume);
 	void  (*audio_set_metadata)(void *cls, void *session, const void *buffer, int buflen);
 	void  (*audio_set_coverart)(void *cls, void *session, const void *buffer, int buflen);
+
+	void  (*audio_get_clock)(void *cls, unsigned long long* clock);
 };
 typedef struct raop_callbacks_s raop_callbacks_t;
 
