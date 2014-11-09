@@ -21,6 +21,7 @@
 #include "raop_rtp.h"
 #include "raop.h"
 #include "raop_buffer.h"
+#include "raop_ntp.h"
 #include "netutils.h"
 #include "utils.h"
 #include "compat.h"
@@ -79,6 +80,16 @@ struct raop_rtp_s {
 	struct sockaddr_storage control_saddr;
 	socklen_t control_saddr_len;
 	unsigned short control_seqnum;
+
+	/* Sync information */
+	unsigned long long  sync_ntp;
+	unsigned int        sync_rtp;
+
+	/* NTP */
+	struct raop_ntp_s   ntp;
+	unsigned long long  ntp_transmit;
+	long long           ntp_offset;
+	unsigned long long  ntp_dispersion;
 };
 
 static int
@@ -150,6 +161,13 @@ raop_rtp_init(logger_t *logger, raop_callbacks_t *callbacks, const char *remote,
 		free(raop_rtp);
 		return NULL;
 	}
+
+	if (raop_rtp->callbacks.audio_get_clock) {
+		raop_rtp->callbacks.audio_get_clock(raop_rtp->callbacks.cls, &raop_rtp->ntp_transmit);
+	}
+	raop_ntp_init(&raop_rtp->ntp, logger, raop_rtp->ntp_transmit);
+	raop_rtp->ntp_dispersion = RAOP_NTP_MAXDISP;
+
 	if (raop_rtp_parse_remote(raop_rtp, remote) < 0) {
 		free(raop_rtp);
 		return NULL;
@@ -249,6 +267,47 @@ raop_rtp_resend_callback(void *opaque, unsigned short seqnum, unsigned short cou
 	ret = sendto(raop_rtp->csock, (const char *)packet, sizeof(packet), 0, addr, addrlen);
 	if (ret == -1) {
 		logger_log(raop_rtp->logger, LOGGER_WARNING, "Resend failed: %d", SOCKET_GET_ERROR());
+	}
+
+	return 0;
+}
+
+static int
+raop_rtp_request_ntp(raop_rtp_t *raop_rtp)
+{
+	unsigned char packet[32];
+	unsigned short ourseqnum;
+	struct sockaddr_storage addr;
+	socklen_t addrlen;
+	int ret;
+
+	addrlen = raop_rtp->control_saddr_len;
+	memcpy(&addr, &raop_rtp->control_saddr, addrlen);
+	if(addr.ss_family == AF_INET6) {
+		struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)&addr;
+		sin6->sin6_port = htons(raop_rtp->timing_rport);
+	} else if(addr.ss_family == AF_INET) {
+		struct sockaddr_in *sin = (struct sockaddr_in *)&addr;
+		sin->sin_port = htons(raop_rtp->timing_rport);
+	}
+
+	if (raop_rtp->callbacks.audio_get_clock)
+		raop_rtp->callbacks.audio_get_clock(raop_rtp->callbacks.cls, &raop_rtp->ntp_transmit);
+
+	/* Fill the request buffer */
+	packet[0] = 0x80;
+	packet[1] = 0x52|0x80;
+	bio_set_be_u16(&packet[2] , 7u);                 /* sequence hard coded to 7 */
+	bio_set_be_u32(&packet[4] , 0u);                 /* timestamp */
+	bio_set_be_u64(&packet[8] , 0u);                 /* origin */
+	bio_set_be_u64(&packet[16], 0u);                 /* receive */
+	bio_set_be_u64(&packet[24], raop_rtp->ntp_transmit); /* transmit */
+
+	ret = sendto(raop_rtp->tsock, (const char *)packet, sizeof(packet), 0, (struct sockaddr*)&addr, addrlen);
+	if (ret == -1) {
+		logger_log(raop_rtp->logger, LOGGER_WARNING, "Timesend failed: %d", SOCKET_GET_ERROR());
+	} else {
+		logger_log(raop_rtp->logger, LOGGER_DEBUG, "Timesend request %llu", raop_rtp->ntp_transmit);
 	}
 
 	return 0;
@@ -393,6 +452,16 @@ raop_rtp_thread_udp(void *arg)
 			break;
 		}
 
+		/* Request time every 3 seconds */
+		if (raop_rtp->callbacks.audio_get_clock) {
+			unsigned long long clock;
+			raop_rtp->callbacks.audio_get_clock(raop_rtp->callbacks.cls, &clock);
+			if ((clock - raop_rtp->ntp_transmit) > (3ull << 32)) {
+				raop_rtp_request_ntp(raop_rtp);
+			}
+		}
+
+
 		/* Set timeout value to 5ms */
 		tv.tv_sec = 0;
 		tv.tv_usec = 5000;
@@ -435,10 +504,37 @@ raop_rtp_thread_udp(void *arg)
 					/* Handle resent data packet */
 					int ret = raop_buffer_queue(raop_rtp->buffer, packet+4, packetlen-4, 1);
 					assert(ret >= 0);
+				} else if (type == 0x54 && packetlen >= 20) {
+					unsigned int       now_rtp;
+					raop_rtp->sync_rtp = bio_get_be_u32(&packet[4]);
+					raop_rtp->sync_ntp = bio_get_be_u64(&packet[8]);
+					now_rtp            = bio_get_be_u32(&packet[16]);
+					logger_log(raop_rtp->logger, LOGGER_DEBUG, "Got time sync packet 0x%08x, 0x%08x, %u, %d", (unsigned int)raop_rtp->sync_ntp, (unsigned int)(raop_rtp->sync_ntp >> 32), raop_rtp->sync_rtp, (int)(raop_rtp->sync_rtp - now_rtp));
 				}
 			}
 		} else if (FD_ISSET(raop_rtp->tsock, &rfds)) {
 			logger_log(raop_rtp->logger, LOGGER_INFO, "Would have timing packet in queue");
+			saddrlen = sizeof(saddr);
+			packetlen = recvfrom(raop_rtp->tsock, (char *)packet, sizeof(packet), 0,
+			                     (struct sockaddr *)&saddr, &saddrlen);
+			if (packetlen >= 12) {
+				char type = packet[1] & ~0x80;
+
+				logger_log(raop_rtp->logger, LOGGER_DEBUG, "Got time packet of type 0x%02x", type);
+				if (type == 0x53 && packetlen >= 32 && raop_rtp->callbacks.audio_get_clock) {
+					unsigned long long origin   = bio_get_be_u64(&packet[8]);
+					unsigned long long receive  = bio_get_be_u64(&packet[16]);
+					unsigned long long transmit = bio_get_be_u64(&packet[24]);
+					unsigned long long current  = 0u;
+
+					if (raop_rtp->callbacks.audio_get_clock) {
+						raop_rtp->callbacks.audio_get_clock(raop_rtp->callbacks.cls, &current);
+
+						raop_ntp_add(&raop_rtp->ntp, origin, receive, transmit, current);
+						raop_ntp_get_offset(&raop_rtp->ntp, current, &raop_rtp->ntp_offset, &raop_rtp->ntp_dispersion);
+					}
+				}
+			}
 		} else if (FD_ISSET(raop_rtp->dsock, &rfds)) {
 			saddrlen = sizeof(saddr);
 			packetlen = recvfrom(raop_rtp->dsock, (char *)packet, sizeof(packet), 0,
@@ -769,3 +865,4 @@ raop_rtp_stop(raop_rtp_t *raop_rtp)
 	raop_rtp->joined = 1;
 	MUTEX_UNLOCK(raop_rtp->run_mutex);
 }
+
