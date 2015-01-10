@@ -51,6 +51,7 @@ http_response_add_data(http_response_t *response, const char *data, int datalen)
 	response->data_length += datalen;
 }
 
+
 http_response_t *
 http_response_init(const char *protocol, int code, const char *message)
 {
@@ -85,6 +86,30 @@ http_response_init(const char *protocol, int code, const char *message)
 	http_response_add_data(response, "\r\n", 2);
 
 	return response;
+}
+
+http_response_t *
+http_response_init1(char *data, int size)
+{
+	http_response_t *response;
+
+	response = calloc(1, sizeof(http_response_t));
+	if (!response) {
+		return NULL;
+	}
+
+	/* Allocate response data */
+	response->data_length = size;
+	response->data_size = size;
+	response->data = malloc(response->data_size);
+	if (!response->data) {
+		free(response);
+		return NULL;
+	}
+	memcpy(response->data, data, size);
+	response->complete = 1;
+
+ 	return response;
 }
 
 void
