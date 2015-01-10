@@ -297,7 +297,7 @@ dnssd_register_airplay(dnssd_t *dnssd, const char *name, unsigned short port, co
 	}
 
 	features[sizeof(features)-1] = '\0';
-	snprintf(features, sizeof(features)-1, "0x%x", GLOBAL_FEATURES);
+	snprintf(features, sizeof(features)-1, "0x%x", GLOBAL_FEATURES_AIRPLAY);
 
 	dnssd->TXTRecordCreate(&txtRecord, 0, NULL);
 	dnssd->TXTRecordSetValue(&txtRecord, "deviceid", strlen(deviceid), deviceid);
