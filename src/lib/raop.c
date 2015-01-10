@@ -359,7 +359,7 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 	}
 	http_response_finish(res, NULL, 0);
 
-	logger_log(conn->raop->logger, LOGGER_DEBUG, "Handled request %s with URL %s", method, http_request_get_url(request));
+	logger_log(conn->raop->logger, LOGGER_DEBUG, "RAOP Handled request %s with URL %s", method, http_request_get_url(request));
 	*response = res;
 }
 

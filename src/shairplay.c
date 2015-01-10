@@ -34,6 +34,7 @@
 
 #include <shairplay/dnssd.h>
 #include <shairplay/raop.h>
+#include <shairplay/airplay.h>
 
 #include <ao/ao.h>
 
@@ -42,7 +43,8 @@
 typedef struct {
 	char apname[56];
 	char password[56];
-	unsigned short port;
+	unsigned short port_raop;
+	unsigned short port_airplay;
 	char hwaddr[6];
 
 	char ao_driver[56];
@@ -250,14 +252,15 @@ audio_set_volume(void *cls, void *opaque, float volume)
 static int
 parse_options(shairplay_options_t *opt, int argc, char *argv[])
 {
-	const char default_hwaddr[] = { 0x48, 0x5d, 0x60, 0x7c, 0xee, 0x22 };
+	const char default_hwaddr[] = { 0x00, 0x24, 0xd7, 0xb2, 0x2e, 0x60 };
 
 	char *path = argv[0];
 	char *arg;
 
 	/* Set default values for apname and port */
 	strncpy(opt->apname, "Shairplay", sizeof(opt->apname)-1);
-	opt->port = 5000;
+	opt->port_raop = 5000;
+	opt->port_airplay = 7000;
 	memcpy(opt->hwaddr, default_hwaddr, sizeof(opt->hwaddr));
 
 	while ((arg = *++argv)) {
@@ -270,9 +273,9 @@ parse_options(shairplay_options_t *opt, int argc, char *argv[])
 		} else if (!strncmp(arg, "--password=", 11)) {
 			strncpy(opt->password, arg+11, sizeof(opt->password)-1);
 		} else if (!strcmp(arg, "-o")) {
-			opt->port = atoi(*++argv);
+			opt->port_raop = atoi(*++argv);
 		} else if (!strncmp(arg, "--server_port=", 14)) {
-			opt->port = atoi(arg+14);
+			opt->port_raop = atoi(arg+14);
 		} else if (!strncmp(arg, "--hwaddr=", 9)) {
 			if (parse_hwaddr(arg+9, opt->hwaddr, sizeof(opt->hwaddr))) {
 				fprintf(stderr, "Invalid format given for hwaddr, aborting...\n");
@@ -314,6 +317,8 @@ main(int argc, char *argv[])
 	dnssd_t *dnssd;
 	raop_t *raop;
 	raop_callbacks_t raop_cbs;
+	airplay_t *airplay;
+	airplay_callbacks_t airplay_cbs;
 	char *password = NULL;
 
 	int error;
@@ -357,7 +362,27 @@ main(int argc, char *argv[])
 		password = options.password;
 	}
 	raop_set_log_level(raop, RAOP_LOG_DEBUG);
-	raop_start(raop, &options.port, options.hwaddr, sizeof(options.hwaddr), password);
+	raop_start(raop, &options.port_raop, options.hwaddr, sizeof(options.hwaddr), password);
+
+	memset(&airplay_cbs, 0, sizeof(airplay_cbs));
+	airplay_cbs.cls = &options;
+	airplay_cbs.audio_init = audio_init;
+	airplay_cbs.audio_process = audio_process;
+	airplay_cbs.audio_destroy = audio_destroy;
+	airplay_cbs.audio_set_volume = audio_set_volume;
+
+	airplay = airplay_init_from_keyfile(10, &airplay_cbs, "airport.key", NULL);
+	if (airplay == NULL) {
+		fprintf(stderr, "Could not initialize the AIRPLAY service\n");
+		fprintf(stderr, "Please make sure the airport.key file is in the current directory.\n");
+		return -1;
+	}
+
+	if (strlen(options.password)) {
+		password = options.password;
+	}
+	airplay_set_log_level(airplay, AIRPLAY_LOG_DEBUG);
+	airplay_start(airplay, &options.port_airplay, options.hwaddr, sizeof(options.hwaddr), password);
 
 	error = 0;
 	dnssd = dnssd_init(&error);
@@ -368,10 +393,12 @@ main(int argc, char *argv[])
 		fprintf(stderr, "Windows: Try installing http://support.apple.com/kb/DL999\n");
 		fprintf(stderr, "Debian/Ubuntu: Try installing libavahi-compat-libdnssd-dev package\n");
 		raop_destroy(raop);
+		airplay_destroy(airplay);
 		return -1;
 	}
 
-	dnssd_register_raop(dnssd, options.apname, options.port, options.hwaddr, sizeof(options.hwaddr), 0);
+	dnssd_register_raop(dnssd, options.apname, options.port_raop, options.hwaddr, sizeof(options.hwaddr), 0);
+	dnssd_register_airplay(dnssd, options.apname, options.port_airplay, options.hwaddr, sizeof(options.hwaddr));
 
 	running = 1;
 	while (running) {
@@ -383,10 +410,14 @@ main(int argc, char *argv[])
 	}
 
 	dnssd_unregister_raop(dnssd);
+	dnssd_unregister_airplay(dnssd);
 	dnssd_destroy(dnssd);
 
 	raop_stop(raop);
 	raop_destroy(raop);
+
+	airplay_stop(airplay);
+	airplay_destroy(airplay);
 
 	ao_shutdown();
 
