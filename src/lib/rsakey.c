@@ -290,6 +290,20 @@ rsakey_mfg1(unsigned char *dst, int dstlen, const unsigned char *seed, int seedl
 	return masklen;
 }
 
+int
+rsakey_base64_decode(rsakey_t *rsakey, unsigned char **output, const char *b64input)
+{
+	int outlen;
+
+	assert(rsakey);
+	if (!output || !b64input) {
+		return -1;
+	}
+
+	outlen = base64_decode(rsakey->base64, output, b64input, strlen(b64input));
+	return outlen;
+}
+
 /* OAEP decryption with SHA-1 hash */
 /* See RFC 3447 7.1.2 for more information */
 int

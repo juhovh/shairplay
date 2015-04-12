@@ -31,6 +31,7 @@ int rsakey_sign(rsakey_t *rsakey, char *dst, int dstlen, const char *b64digest,
                 unsigned char *ipaddr, int ipaddrlen,
                 unsigned char *hwaddr, int hwaddrlen);
 
+int rsakey_base64_decode(rsakey_t *rsakey, unsigned char **output, const char *b64input);
 int rsakey_decrypt(rsakey_t *rsakey, unsigned char *dst, int dstlen, const char *b64input);
 int rsakey_parseiv(rsakey_t *rsakey, unsigned char *dst, int dstlen, const char *b64input);
 

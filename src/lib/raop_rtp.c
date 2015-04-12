@@ -122,7 +122,7 @@ raop_rtp_parse_remote(raop_rtp_t *raop_rtp, const char *remote)
 raop_rtp_t *
 raop_rtp_init(logger_t *logger, raop_callbacks_t *callbacks, const char *remote,
               const char *rtpmap, const char *fmtp,
-              const unsigned char *aeskey, const unsigned char *aesiv)
+              const unsigned char *aeskey, const unsigned char *aesiv, int et, int cn)
 {
 	raop_rtp_t *raop_rtp;
 
@@ -138,7 +138,7 @@ raop_rtp_init(logger_t *logger, raop_callbacks_t *callbacks, const char *remote,
 	}
 	raop_rtp->logger = logger;
 	memcpy(&raop_rtp->callbacks, callbacks, sizeof(raop_callbacks_t));
-	raop_rtp->buffer = raop_buffer_init(rtpmap, fmtp, aeskey, aesiv);
+	raop_rtp->buffer = raop_buffer_init(rtpmap, fmtp, aeskey, aesiv, et, cn);
 	if (!raop_rtp->buffer) {
 		free(raop_rtp);
 		return NULL;
@@ -347,6 +347,7 @@ raop_rtp_thread_udp(void *arg)
 
 		/* Check if we are still running and process callbacks */
 		if (raop_rtp_process_events(raop_rtp, cb_data)) {
+		        logger_log(raop_rtp->logger, LOGGER_DEBUG, "rtp not running");
 			break;
 		}
 
@@ -372,6 +373,7 @@ raop_rtp_thread_udp(void *arg)
 			continue;
 		} else if (ret == -1) {
 			/* FIXME: Error happened */
+		        logger_log(raop_rtp->logger, LOGGER_DEBUG, "select error");
 			break;
 		}
 
@@ -420,7 +422,7 @@ raop_rtp_thread_udp(void *arg)
 					raop_buffer_handle_resends(raop_rtp->buffer, raop_rtp_resend_callback, raop_rtp);
 				}
 			}
-		}
+		} 
 	}
 	logger_log(raop_rtp->logger, LOGGER_INFO, "Exiting UDP RAOP thread");
 	raop_rtp->callbacks.audio_destroy(raop_rtp->callbacks.cls, cb_data);

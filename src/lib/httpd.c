@@ -49,6 +49,8 @@ struct httpd_s {
 	/* Server fds for accepting connections */
 	int server_fd4;
 	int server_fd6;
+
+	unsigned short port;
 };
 
 httpd_t *
@@ -397,6 +399,7 @@ httpd_start(httpd_t *httpd, unsigned short *port)
 	/* Set values correctly and create new thread */
 	httpd->running = 1;
 	httpd->joined = 0;
+	httpd->port = *port;
 	THREAD_CREATE(httpd->thread, httpd_thread, httpd);
 	MUTEX_UNLOCK(httpd->run_mutex);
 

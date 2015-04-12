@@ -29,6 +29,7 @@
 #include "netutils.h"
 #include "logger.h"
 #include "compat.h"
+#include "fpsetup.h"
 
 /* Actually 345 bytes for 2048-bit key */
 #define MAX_SIGNATURE_LEN 512
@@ -50,6 +51,10 @@ struct raop_s {
 	httpd_t *httpd;
 	rsakey_t *rsakey;
 
+	/* event server */
+	httpd_t *event_httpd;
+	unsigned short event_port;
+
 	/* Hardware address information */
 	unsigned char hwaddr[MAX_HWADDR_LEN];
 	int hwaddrlen;
@@ -67,6 +72,12 @@ struct raop_conn_s {
 
 	unsigned char *remote;
 	int remotelen;
+
+	/* encrypt types: 0,no encrypt; 1, RSA; 3, Fairplay; */
+	int et;
+
+	/* codecs: 0, PCM; 1, ALAC; 2, AAC; 3, AAC-ELD */
+	int cn;
 
 	char nonce[MAX_NONCE_LEN+1];
 };
@@ -116,9 +127,13 @@ conn_init(void *opaque, unsigned char *local, int locallen, unsigned char *remot
 	conn->locallen = locallen;
 	conn->remotelen = remotelen;
 
+	conn->et = 1;
+	conn->cn = 1;
+
 	digest_generate_nonce(conn->nonce, sizeof(conn->nonce));
 	return conn;
 }
+
 
 static void
 conn_request(void *ptr, http_request_t *request, http_response_t **response)
@@ -129,15 +144,23 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 
 	http_response_t *res;
 	const char *method;
+	const char *uri;
 	const char *cseq;
 	const char *challenge;
+	const char *responseData = NULL;
+	int responseDataLen = 0;
+
 	int require_auth = 0;
 
 	method = http_request_get_method(request);
+	uri = http_request_get_url(request);
 	cseq = http_request_get_header(request, "CSeq");
 	if (!method || !cseq) {
 		return;
 	}
+
+	logger_log(conn->raop->logger, LOGGER_DEBUG, "http request %s %s", method, uri);
+	http_request_dump_headers(request);
 
 	res = http_response_init("RTSP/1.0", 200, "OK");
 
@@ -178,6 +201,9 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 		}
 	}
 
+	if (conn->et != 1) {
+		http_response_add_header(res, "Server", "AirTunes/150.33");
+	} 
 	http_response_add_header(res, "CSeq", cseq);
 	http_response_add_header(res, "Apple-Jack-Status", "connected; type=analog");
 
@@ -192,10 +218,28 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 
 		logger_log(conn->raop->logger, LOGGER_DEBUG, "Got challenge: %s", challenge);
 		logger_log(conn->raop->logger, LOGGER_DEBUG, "Got response: %s", signature);
-	}
-
-	if (require_auth) {
+	} else if (require_auth) {
 		/* Do nothing in case of authentication request */
+	} else if (!strcmp(method, "POST") && !strcmp(uri, "/fp-setup")) {
+		const char *data;
+		int datalen, size;
+                char *buf;
+
+		data = http_request_get_data(request, &datalen);
+	        buf = send_fairplay_query((datalen==16?1:2), data, datalen, &size);
+
+		if (buf) {
+		  responseData = buf;
+		  responseDataLen = size;
+                }
+	} else if ( !strcmp(method, "POST") && !strcmp(uri, "/auth-setup")) {
+		const char *data;
+		int datalen;
+
+		data = http_request_get_data(request, &datalen);
+
+		responseData = data;
+		responseDataLen = datalen;
 	} else if (!strcmp(method, "OPTIONS")) {
 		http_response_add_header(res, "Public", "ANNOUNCE, SETUP, RECORD, PAUSE, FLUSH, TEARDOWN, OPTIONS, GET_PARAMETER, SET_PARAMETER");
 	} else if (!strcmp(method, "ANNOUNCE")) {
@@ -209,22 +253,44 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 		data = http_request_get_data(request, &datalen);
 		if (data) {
 			sdp_t *sdp;
-			const char *remotestr, *rtpmapstr, *fmtpstr, *aeskeystr, *aesivstr;
+			const char *remotestr, *rtpmapstr, *fmtpstr, *aeskeystr, *aesivstr,*fpaeskeystr;
 
 			sdp = sdp_init(data, datalen);
 			remotestr = sdp_get_connection(sdp);
 			rtpmapstr = sdp_get_rtpmap(sdp);
 			fmtpstr = sdp_get_fmtp(sdp);
 			aeskeystr = sdp_get_rsaaeskey(sdp);
+			fpaeskeystr = sdp_get_fpaeskey(sdp);
 			aesivstr = sdp_get_aesiv(sdp);
 
 			logger_log(conn->raop->logger, LOGGER_DEBUG, "connection: %s", remotestr);
 			logger_log(conn->raop->logger, LOGGER_DEBUG, "rtpmap: %s", rtpmapstr);
 			logger_log(conn->raop->logger, LOGGER_DEBUG, "fmtp: %s", fmtpstr);
 			logger_log(conn->raop->logger, LOGGER_DEBUG, "rsaaeskey: %s", aeskeystr);
+			logger_log(conn->raop->logger, LOGGER_DEBUG, "fpaeskey: %s", fpaeskeystr);
 			logger_log(conn->raop->logger, LOGGER_DEBUG, "aesiv: %s", aesivstr);
 
-			aeskeylen = rsakey_decrypt(raop->rsakey, aeskey, sizeof(aeskey), aeskeystr);
+			if (strstr(fmtpstr, "AAC-eld") != NULL) 
+				conn->cn = 3;
+			else if (strstr(fmtpstr, "AAC") != 0) 
+				conn->cn = 2; 
+
+		        if (fpaeskeystr && !aeskeystr) {
+				int len;
+				unsigned char *buf;
+				unsigned char *p;
+				conn->et = 3;
+				len = rsakey_base64_decode(raop->rsakey, &buf, fpaeskeystr);
+				if (buf && len == 72) {
+					p = send_fairplay_query(3, buf, len, &aeskeylen);
+					if (aeskeylen == 16) 
+						memcpy(aeskey, p, aeskeylen);
+				} else {
+					logger_log(conn->raop->logger, LOGGER_DEBUG, "base64 decode fail len=%d", len);
+				}
+			} else {
+				aeskeylen = rsakey_decrypt(raop->rsakey, aeskey, sizeof(aeskey), aeskeystr);
+			}
 			aesivlen = rsakey_parseiv(raop->rsakey, aesiv, sizeof(aesiv), aesivstr);
 			logger_log(conn->raop->logger, LOGGER_DEBUG, "aeskeylen: %d", aeskeylen);
 			logger_log(conn->raop->logger, LOGGER_DEBUG, "aesivlen: %d", aesivlen);
@@ -234,16 +300,17 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 				raop_rtp_destroy(conn->raop_rtp);
 				conn->raop_rtp = NULL;
 			}
-			conn->raop_rtp = raop_rtp_init(raop->logger, &raop->callbacks, remotestr, rtpmapstr, fmtpstr, aeskey, aesiv);
+			conn->raop_rtp = raop_rtp_init(raop->logger, &raop->callbacks, remotestr, rtpmapstr, fmtpstr, \
+							aeskey, aesiv, conn->et, conn->cn);
 			if (!conn->raop_rtp) {
-				logger_log(conn->raop->logger, LOGGER_ERR, "Error initializing the audio decoder");
+				logger_log(conn->raop->logger, LOGGER_ERR, "Error initializing the audio stream");
 				http_response_set_disconnect(res, 1);
 			}
 			sdp_destroy(sdp);
 		}
 	} else if (!strcmp(method, "SETUP")) {
 		unsigned short remote_cport=0, remote_tport=0;
-		unsigned short cport=0, tport=0, dport=0;
+		unsigned short cport=0, tport=0, dport=0, eport=0;
 		const char *transport;
 		char buffer[1024];
 		int use_udp;
@@ -284,10 +351,12 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 		}
 
 		memset(buffer, 0, sizeof(buffer));
+		eport = conn->raop->event_port;
 		if (use_udp) {
 			snprintf(buffer, sizeof(buffer)-1,
-			         "RTP/AVP/UDP;unicast;mode=record;timing_port=%hu;events;control_port=%hu;server_port=%hu",
-			         tport, cport, dport);
+			         "RTP/AVP/UDP;unicast;mode=record;timing_port=%hu;control_port=%hu;server_port=%hu;event_port=%hu",
+		//	         "RTP/AVP/UDP;unicast;mode=record;timing_port=%hu;events;control_port=%hu;server_port=%hu;event_port=%hu",
+			         tport, cport, dport, eport);
 		} else {
 			snprintf(buffer, sizeof(buffer)-1,
 			         "RTP/AVP/TCP;unicast;interleaved=0-1;mode=record;server_port=%u",
@@ -295,7 +364,9 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 		}
 		logger_log(conn->raop->logger, LOGGER_INFO, "Responding with %s", buffer);
 		http_response_add_header(res, "Transport", buffer);
-		http_response_add_header(res, "Session", "DEADBEEF");
+		//http_response_add_header(res, "Session", "DEADBEEF");
+		http_response_add_header(res, "Session", "1");
+		http_response_add_header(res, "Audio-Jack-Status", "connected");
 	} else if (!strcmp(method, "SET_PARAMETER")) {
 		const char *content_type;
 		const char *data;
@@ -356,10 +427,19 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 			raop_rtp_destroy(conn->raop_rtp);
 			conn->raop_rtp = NULL;
 		}
-	}
-	http_response_finish(res, NULL, 0);
+	} else if (!strcmp(method, "RECORD")) {
+		http_response_add_header(res, "Audio-Latency", "3750");
+	} else if (!strcmp(method, "GET_PARAMETER")) {
+		char *data = "Volume 1.000000";
+		http_response_add_header(res, "Content-Type", "text/parameters");
+		responseData = data;
+		responseDataLen = strlen(responseData);
+	} else {
+		logger_log(conn->raop->logger, LOGGER_DEBUG, "Unknown request %s with URL %s", method, http_request_get_url(request));
+        }
+	http_response_finish(res, responseData, responseDataLen);
 
-	logger_log(conn->raop->logger, LOGGER_DEBUG, "RAOP Handled request %s with URL %s", method, http_request_get_url(request));
+	logger_log(conn->raop->logger, LOGGER_DEBUG, "Handled", method);
 	*response = res;
 }
 
@@ -381,7 +461,7 @@ raop_t *
 raop_init(int max_clients, raop_callbacks_t *callbacks, const char *pemkey, int *error)
 {
 	raop_t *raop;
-	httpd_t *httpd;
+	httpd_t *httpd,*event_httpd;
 	rsakey_t *rsakey;
 	httpd_callbacks_t httpd_cbs;
 
@@ -438,6 +518,16 @@ raop_init(int max_clients, raop_callbacks_t *callbacks, const char *pemkey, int 
 
 	raop->httpd = httpd;
 	raop->rsakey = rsakey;
+
+	/* Initialize the http event daemon */
+	event_httpd = httpd_init(raop->logger, &httpd_cbs, max_clients);
+	if (!event_httpd) {
+		free(httpd);
+		rsakey_destroy(raop->rsakey);
+		free(raop);
+		return NULL;
+	}
+	raop->event_httpd = event_httpd;
 
 	return raop;
 }
@@ -499,6 +589,10 @@ raop_set_log_callback(raop_t *raop, raop_log_callback_t callback, void *cls)
 int
 raop_start(raop_t *raop, unsigned short *port, const char *hwaddr, int hwaddrlen, const char *password)
 {
+	int ret = 0;
+	int i;
+	unsigned short eport;
+
 	assert(raop);
 	assert(port);
 	assert(hwaddr);
@@ -523,7 +617,24 @@ raop_start(raop_t *raop, unsigned short *port, const char *hwaddr, int hwaddrlen
 	memcpy(raop->hwaddr, hwaddr, hwaddrlen);
 	raop->hwaddrlen = hwaddrlen;
 
-	return httpd_start(raop->httpd, port);
+	ret = httpd_start(raop->httpd, port);
+	if (ret != 1) {
+		logger_log(raop->logger, LOGGER_INFO, "Fail to start httpd at port %d\n", *port);
+		return ret;
+	}
+
+	i = 10;
+	while (i < 100) {
+		eport = *port + i;
+		ret = httpd_start(raop->event_httpd, &eport);
+		if (ret == 1) break;
+		i += 10;
+        }
+	if (ret != 1) {
+		logger_log(raop->logger, LOGGER_INFO, "Fail to start event daemon at port %d\n", eport);
+	}
+	raop->event_port = eport;
+	return ret;
 }
 
 void
@@ -531,6 +642,6 @@ raop_stop(raop_t *raop)
 {
 	assert(raop);
 
+	httpd_stop(raop->event_httpd);
 	httpd_stop(raop->httpd);
 }
-

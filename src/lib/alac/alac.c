@@ -760,7 +760,7 @@ void deinterlace_24(int32_t *buffer_a, int32_t *buffer_b,
 	
 }
 
-void decode_frame(alac_file *alac,
+void alac_decode_frame(alac_file *alac,
                   unsigned char *inbuffer,
                   void *outbuffer, int *outputsize)
 {

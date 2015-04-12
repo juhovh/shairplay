@@ -24,6 +24,7 @@
 #include <stdint.h>
 #include "crypto/crypto.h"
 #include "alac/alac.h"
+#include "aac_eld/aac_eld.h"
 
 #define RAOP_BUFFER_LENGTH 32
 
@@ -49,9 +50,15 @@ struct raop_buffer_s {
 	unsigned char aeskey[RAOP_AESKEY_LEN];
 	unsigned char aesiv[RAOP_AESIV_LEN];
 
+	/* New AES key ctx */
+        AES_KEY key_ctx;
+
 	/* ALAC decoder */
 	ALACSpecificConfig alacConfig;
 	alac_file *alac;
+       
+        /* AAC-ELD decoder */
+        aac_eld_file *aac_eld;
 
 	/* First and last seqnum */
 	int is_empty;
@@ -64,92 +71,117 @@ struct raop_buffer_s {
 	/* Buffer of all audio buffers */
 	int buffer_size;
 	void *buffer;
+
+        /* encryption type*/
+        int et;
+
+        /* audio codecs*/
+        int cn;
 };
 
 
 
 static int
-get_fmtp_info(ALACSpecificConfig *config, const char *fmtp)
+get_fmtp_info(ALACSpecificConfig *config, const char *fmtp, int cn)
 {
-	int intarr[12];
-	char *original;
-	char *strptr;
-	int i;
+	if (cn == 1) {
+		int intarr[12];
+		char *original;
+		char *strptr;
+		int i;
 
-	/* Parse fmtp string to integers */
-	original = strptr = strdup(fmtp);
-	for (i=0; i<12; i++) {
-		if (strptr == NULL) {
-			free(original);
-			return -1;
+		/* Parse fmtp string to integers */
+		original = strptr = strdup(fmtp);
+		for (i=0; i<12; i++) {
+			if (strptr == NULL) {
+				free(original);
+				return -1;
+			}
+			intarr[i] = atoi(utils_strsep(&strptr, " "));
 		}
-		intarr[i] = atoi(utils_strsep(&strptr, " "));
-	}
-	free(original);
-	original = strptr = NULL;
+		free(original);
+		original = strptr = NULL;
 
-	/* Fill the config struct */
-	config->frameLength = intarr[1];
-	config->compatibleVersion = intarr[2];
-	config->bitDepth = intarr[3];
-	config->pb = intarr[4];
-	config->mb = intarr[5];
-	config->kb = intarr[6];
-	config->numChannels = intarr[7];
-	config->maxRun = intarr[8];
-	config->maxFrameBytes = intarr[9];
-	config->avgBitRate = intarr[10];
-	config->sampleRate = intarr[11];
+		/* Fill the config struct */
+		config->frameLength = intarr[1];
+		config->compatibleVersion = intarr[2];
+		config->bitDepth = intarr[3];
+		config->pb = intarr[4];
+		config->mb = intarr[5];
+		config->kb = intarr[6];
+		config->numChannels = intarr[7];
+		config->maxRun = intarr[8];
+		config->maxFrameBytes = intarr[9];
+		config->avgBitRate = intarr[10];
+		config->sampleRate = intarr[11];
 
-	/* Validate supported audio types */
-	if (config->bitDepth != 16) {
-		return -2;
-	}
-	if (config->numChannels != 2) {
-		return -3;
+		/* Validate supported audio types */
+		if (config->bitDepth != 16) {
+			return -2;
+		}
+		if (config->numChannels != 2) {
+			return -3;
+		}
+	} else {
+		/* Fill the config struct */
+		config->frameLength = 4096;
+		config->compatibleVersion = 0;
+		config->bitDepth = 16;
+		config->pb = 40;
+		config->mb = 10;
+		config->kb = 14;
+		config->numChannels = 2;
+		config->maxRun = 255;
+		config->maxFrameBytes = 0;
+		config->avgBitRate = 0;
+		config->sampleRate = 44100;
 	}
 
 	return 0;
 }
 
 static void
-set_decoder_info(alac_file *alac, ALACSpecificConfig *config)
+set_decoder_info(alac_file *alac, ALACSpecificConfig *config, int cn)
 {
-	unsigned char decoder_info[48];
-	memset(decoder_info, 0, sizeof(decoder_info));
+	if (cn == 1) {
+		unsigned char decoder_info[48];
+		memset(decoder_info, 0, sizeof(decoder_info));
 
 #define SET_UINT16(buf, value)do{\
 	(buf)[0] = (unsigned char)((value) >> 8);\
 	(buf)[1] = (unsigned char)(value);\
-	}while(0)
+}while(0)
 
 #define SET_UINT32(buf, value)do{\
 	(buf)[0] = (unsigned char)((value) >> 24);\
 	(buf)[1] = (unsigned char)((value) >> 16);\
 	(buf)[2] = (unsigned char)((value) >> 8);\
 	(buf)[3] = (unsigned char)(value);\
-	}while(0)
+}while(0)
 
-	/* Construct decoder info buffer */
-	SET_UINT32(&decoder_info[24], config->frameLength);
-	decoder_info[28] = config->compatibleVersion;
-	decoder_info[29] = config->bitDepth;
-	decoder_info[30] = config->pb;
-	decoder_info[31] = config->mb;
-	decoder_info[32] = config->kb;
-	decoder_info[33] = config->numChannels;
-	SET_UINT16(&decoder_info[34], config->maxRun);
-	SET_UINT32(&decoder_info[36], config->maxFrameBytes);
-	SET_UINT32(&decoder_info[40], config->avgBitRate);
-	SET_UINT32(&decoder_info[44], config->sampleRate);
-	alac_set_info(alac, (char *) decoder_info);
+		/* Construct decoder info buffer */
+		SET_UINT32(&decoder_info[24], config->frameLength);
+		decoder_info[28] = config->compatibleVersion;
+		decoder_info[29] = config->bitDepth;
+		decoder_info[30] = config->pb;
+		decoder_info[31] = config->mb;
+		decoder_info[32] = config->kb;
+		decoder_info[33] = config->numChannels;
+		SET_UINT16(&decoder_info[34], config->maxRun);
+		SET_UINT32(&decoder_info[36], config->maxFrameBytes);
+		SET_UINT32(&decoder_info[40], config->avgBitRate);
+		SET_UINT32(&decoder_info[44], config->sampleRate);
+		alac_set_info(alac, (char *) decoder_info);
+	} else {
+		/* Nothing to do */
+	}
 }
 
 raop_buffer_t *
 raop_buffer_init(const char *rtpmap,
                  const char *fmtp,
                  const unsigned char *aeskey,
-                 const unsigned char *aesiv)
+                 const unsigned char *aesiv, int et, int cn)
 {
 	raop_buffer_t *raop_buffer;
 	int audio_buffer_size;
@@ -168,7 +200,7 @@ raop_buffer_init(const char *rtpmap,
 
 	/* Parse fmtp information */
 	alacConfig = &raop_buffer->alacConfig;
-	if (get_fmtp_info(alacConfig, fmtp) < 0) {
+	if (get_fmtp_info(alacConfig, fmtp, et) < 0) {
 		free(raop_buffer);
 		return NULL;
 	}
@@ -191,22 +223,47 @@ raop_buffer_init(const char *rtpmap,
 		entry->audio_buffer = (char *)raop_buffer->buffer+i*audio_buffer_size;
 	}
 
-	/* Initialize ALAC decoder */
-	raop_buffer->alac = create_alac(alacConfig->bitDepth,
-	                                alacConfig->numChannels);
-	if (!raop_buffer->alac) {
-		free(raop_buffer->buffer);
-		free(raop_buffer);
+	if (cn == 1) {
+		/* Initialize ALAC decoder */
+		raop_buffer->alac = create_alac(alacConfig->bitDepth,
+				alacConfig->numChannels);
+		if (!raop_buffer->alac) {
+			free(raop_buffer->buffer);
+			free(raop_buffer);
+			return NULL;
+		}
+		set_decoder_info(raop_buffer->alac, alacConfig, cn);
+	} else if (cn == 3) {
+		/* Initialize AAC-ELD decoder */
+		raop_buffer->aac_eld = create_aac_eld();
+	} else {
+		/* Todo */
 		return NULL;
 	}
-	set_decoder_info(raop_buffer->alac, alacConfig);
 
-	/* Initialize AES keys */
-	memcpy(raop_buffer->aeskey, aeskey, RAOP_AESKEY_LEN);
-	memcpy(raop_buffer->aesiv, aesiv, RAOP_AESIV_LEN);
+	if (et == 1) {
+		/* Initialize AES keys */
+		memcpy(raop_buffer->aeskey, aeskey, RAOP_AESKEY_LEN);
+		memcpy(raop_buffer->aesiv, aesiv, RAOP_AESIV_LEN);
+	} else if (et == 3) {
+		/* Initialize AES key ctx */
+		AES_set_decrypt_key(aeskey, 128, &raop_buffer->key_ctx);
+		memcpy(&raop_buffer->key_ctx.rd_key, aeskey, RAOP_AESKEY_LEN);
+		memcpy(&raop_buffer->key_ctx.in, aeskey, RAOP_AESKEY_LEN);
+		memcpy(&raop_buffer->key_ctx.iv, aesiv, RAOP_AESIV_LEN);
+		raop_buffer->key_ctx.remain_flags = 0;
+		raop_buffer->key_ctx.remain_bytes = 0;
+	} else {
+		/* Todo */
+		return NULL;
+	}
 
 	/* Mark buffer as empty */
 	raop_buffer->is_empty = 1;
+
+	raop_buffer->et = et;
+	raop_buffer->cn = cn;
+
 	return raop_buffer;
 }
 
@@ -214,7 +271,10 @@ void
 raop_buffer_destroy(raop_buffer_t *raop_buffer)
 {
 	if (raop_buffer) {
-		destroy_alac(raop_buffer->alac);
+		if (raop_buffer->cn == 1)
+		  destroy_alac(raop_buffer->alac);
+                else
+		  destroy_aac_eld(raop_buffer->aac_eld);
 		free(raop_buffer->buffer);
 		free(raop_buffer);
 	}
@@ -286,15 +346,25 @@ raop_buffer_queue(raop_buffer_t *raop_buffer, unsigned char *data, unsigned shor
 	entry->available = 1;
 
 	/* Decrypt audio data */
-	encryptedlen = (datalen-12)/16*16;
-	AES_set_key(&aes_ctx, raop_buffer->aeskey, raop_buffer->aesiv, AES_MODE_128);
-	AES_convert_key(&aes_ctx);
-	AES_cbc_decrypt(&aes_ctx, &data[12], packetbuf, encryptedlen);
-	memcpy(packetbuf+encryptedlen, &data[12+encryptedlen], datalen-12-encryptedlen);
+	if (raop_buffer->et == 1) {
+		encryptedlen = (datalen-12)/16*16;
+		AES_set_key(&aes_ctx, raop_buffer->aeskey, raop_buffer->aesiv, AES_MODE_128);
+		AES_convert_key(&aes_ctx);
+		AES_cbc_decrypt(&aes_ctx, &data[12], packetbuf, encryptedlen);
+		memcpy(packetbuf+encryptedlen, &data[12+encryptedlen], datalen-12-encryptedlen);
+	} else if (raop_buffer->et == 3) {
+		//airplay_decrypt(&raop_buffer->key_ctx, &data[12], datalen - 12, &packetbuf);
+	} else {
+		return -2;
+	}
 
-	/* Decode ALAC audio data */
+	/* Decode audio data */
 	outputlen = entry->audio_buffer_size;
-	decode_frame(raop_buffer->alac, packetbuf, entry->audio_buffer, &outputlen);
+	if (raop_buffer->cn == 1) 
+		alac_decode_frame(raop_buffer->alac, packetbuf, entry->audio_buffer, &outputlen);
+        else if (raop_buffer->cn == 3)
+		aac_eld_decode_frame(raop_buffer->aac_eld, packetbuf, datalen - 12, entry->audio_buffer, &outputlen);
+	else return -3;
 	entry->audio_buffer_len = outputlen;
 
 	/* Update the raop_buffer seqnums */

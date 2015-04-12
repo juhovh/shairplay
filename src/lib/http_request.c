@@ -12,6 +12,7 @@
  *  Lesser General Public License for more details.
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -249,4 +250,16 @@ http_request_get_data(http_request_t *request, int *datalen)
 		*datalen = request->datalen;
 	}
 	return request->data;
+}
+
+void
+http_request_dump_headers(http_request_t *request)
+{
+	int i;
+
+	assert(request);
+
+	for (i=0; i<request->headers_size; i+=2) {
+		fprintf(stderr,"%s:%s\n",request->headers[i],request->headers[i+1]);
+	}
 }

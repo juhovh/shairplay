@@ -10,5 +10,5 @@ if HAVE_LIBAO
   shairplay_LDFLAGS = -static-libtool-libs
 
   shairplay_CFLAGS += $(libao_CFLAGS)
-  shairplay_LDADD += $(libao_LIBS)
+  shairplay_LDADD += $(libao_LIBS) 
 endif

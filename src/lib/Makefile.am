@@ -1,13 +1,13 @@
-SUBDIRS = crypto alac
+SUBDIRS = crypto alac aac_eld
 
 AM_CPPFLAGS = -I$(top_srcdir)/include/shairplay
 
 lib_LTLIBRARIES = libshairplay.la
-libshairplay_la_SOURCES = base64.c base64.h digest.c digest.h dnssd.c dnssdint.h http_parser.c http_parser.h http_request.c http_request.h http_response.c http_response.h httpd.c httpd.h logger.c logger.h netutils.c netutils.h raop.c raop_buffer.c raop_buffer.h raop_rtp.c raop_rtp.h rsakey.c rsakey.h rsapem.c rsapem.h sdp.c sdp.h utils.c utils.h compat.h memalign.h sockets.h threads.h airplay.c
+libshairplay_la_SOURCES = base64.c base64.h digest.c digest.h dnssd.c dnssdint.h http_parser.c http_parser.h http_request.c http_request.h http_response.c http_response.h httpd.c httpd.h logger.c logger.h netutils.c netutils.h raop.c raop_buffer.c raop_buffer.h raop_rtp.c raop_rtp.h rsakey.c rsakey.h rsapem.c rsapem.h sdp.c sdp.h utils.c utils.h compat.h memalign.h sockets.h threads.h airplay.c fpsetup.h fpsetup.c
 libshairplay_la_CPPFLAGS = $(AM_CPPFLAGS)
 
 # This library depends on 3rd party libraries
-libshairplay_la_LIBADD = crypto/libcrypto.la alac/libalac.la
+libshairplay_la_LIBADD = crypto/libcrypto.la alac/libalac.la aac_eld/libaac_eld.la
 libshairplay_la_LDFLAGS = -no-undefined -version-info 0:0:0
 
 ### Update -version-info above with the following rules
@@ -26,7 +26,8 @@ libshairplay_la_LDFLAGS = -no-undefined -version-info 0:0:0
 ###
 
 libshairplay_la_LIBADD += $(LIBADD_DLOPEN)
-libshairplay_la_LIBADD += $(LIBM)
+libshairplay_la_LIBADD += $(LIBM) 
+libshairplay_la_LIBADD +=  -lfdk-aac
 
 if OS_WIN32
 libshairplay_la_CPPFLAGS += -DDLL_EXPORT

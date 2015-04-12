@@ -32,5 +32,6 @@ const char *http_request_get_header(http_request_t *request, const char *name);
 const char *http_request_get_data(http_request_t *request, int *datalen);
 
 void http_request_destroy(http_request_t *request);
+void http_request_dump_headers(http_request_t *request);
 
 #endif

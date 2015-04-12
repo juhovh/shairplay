@@ -37,7 +37,7 @@ typedef int (*raop_resend_cb_t)(void *opaque, unsigned short seqno, unsigned sho
 raop_buffer_t *raop_buffer_init(const char *rtpmap,
                                 const char *fmtp,
                                 const unsigned char *aeskey,
-                                const unsigned char *aesiv);
+                                const unsigned char *aesiv, int et, int cn);
 
 const ALACSpecificConfig *raop_buffer_get_config(raop_buffer_t *raop_buffer);
 int raop_buffer_queue(raop_buffer_t *raop_buffer, unsigned char *data, unsigned short datalen, int use_seqnum);

@@ -29,6 +29,7 @@
 #include "netutils.h"
 #include "logger.h"
 #include "compat.h"
+#include "fpsetup.h"
 
 /* Actually 345 bytes for 2048-bit key */
 #define MAX_SIGNATURE_LEN 512
@@ -168,6 +169,51 @@ const char *eventStrings[] = {"playing", "paused", "loading", "stopped"};
 "</dict>\r\n"\
 "</plist>\r\n"\
 
+// 2 1 1 -> 4 : 02 00 02 bb
+uint8_t fply_1[] __attribute__((unused)) = {
+	0x46, 0x50, 0x4c, 0x59, 0x02, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x04, 0x02, 0x00, 0x02, 0xbb
+};
+
+// 2 1 2 -> 130 : 02 02 xxx
+uint8_t fply_2[] = {
+	0x46, 0x50, 0x4c, 0x59, 0x02, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x82,
+	0x02, 0x02, 0x2f, 0x7b, 0x69, 0xe6, 0xb2, 0x7e, 0xbb, 0xf0, 0x68, 0x5f, 0x98, 0x54, 0x7f, 0x37,
+	0xce, 0xcf, 0x87, 0x06, 0x99, 0x6e, 0x7e, 0x6b, 0x0f, 0xb2, 0xfa, 0x71, 0x20, 0x53, 0xe3, 0x94,
+	0x83, 0xda, 0x22, 0xc7, 0x83, 0xa0, 0x72, 0x40, 0x4d, 0xdd, 0x41, 0xaa, 0x3d, 0x4c, 0x6e, 0x30,
+	0x22, 0x55, 0xaa, 0xa2, 0xda, 0x1e, 0xb4, 0x77, 0x83, 0x8c, 0x79, 0xd5, 0x65, 0x17, 0xc3, 0xfa,
+	0x01, 0x54, 0x33, 0x9e, 0xe3, 0x82, 0x9f, 0x30, 0xf0, 0xa4, 0x8f, 0x76, 0xdf, 0x77, 0x11, 0x7e,
+	0x56, 0x9e, 0xf3, 0x95, 0xe8, 0xe2, 0x13, 0xb3, 0x1e, 0xb6, 0x70, 0xec, 0x5a, 0x8a, 0xf2, 0x6a,
+	0xfc, 0xbc, 0x89, 0x31, 0xe6, 0x7e, 0xe8, 0xb9, 0xc5, 0xf2, 0xc7, 0x1d, 0x78, 0xf3, 0xef, 0x8d,
+	0x61, 0xf7, 0x3b, 0xcc, 0x17, 0xc3, 0x40, 0x23, 0x52, 0x4a, 0x8b, 0x9c, 0xb1, 0x75, 0x05, 0x66,
+	0xe6, 0xb3
+};
+
+// 2 1 3 -> 152
+// 4 : 02 8f 1a 9c
+// 128 : xxx
+// 20 : 5b ed 04 ed c3 cd 5f e6 a8 28 90 3b 42 58 15 cb 74 7d ee 85
+
+uint8_t fply_3[] __attribute__((unused)) = {
+	0x46, 0x50, 0x4c, 0x59, 0x02, 0x01, 0x03, 0x00, 0x00, 0x00, 0x00, 0x98, 0x02, 0x8f,
+	0x1a, 0x9c, 0x6e, 0x73, 0xd2, 0xfa, 0x62, 0xb2, 0xb2, 0x07, 0x6f, 0x52, 0x5f, 0xe5, 0x72, 0xa5,
+	0xac, 0x4d, 0x19, 0xb4, 0x7c, 0xd8, 0x07, 0x1e, 0xdb, 0xbc, 0x98, 0xae, 0x7e, 0x4b, 0xb4, 0xb7,
+	0x2a, 0x7b, 0x5e, 0x2b, 0x8a, 0xde, 0x94, 0x4b, 0x1d, 0x59, 0xdf, 0x46, 0x45, 0xa3, 0xeb, 0xe2,
+	0x6d, 0xa2, 0x83, 0xf5, 0x06, 0x53, 0x8f, 0x76, 0xe7, 0xd3, 0x68, 0x3c, 0xeb, 0x1f, 0x80, 0x0e,
+	0x68, 0x9e, 0x27, 0xfc, 0x47, 0xbe, 0x3d, 0x8f, 0x73, 0xaf, 0xa1, 0x64, 0x39, 0xf7, 0xa8, 0xf7,
+	0xc2, 0xc8, 0xb0, 0x20, 0x0c, 0x85, 0xd6, 0xae, 0xb7, 0xb2, 0xd4, 0x25, 0x96, 0x77, 0x91, 0xf8,
+	0x83, 0x68, 0x10, 0xa1, 0xa9, 0x15, 0x4a, 0xa3, 0x37, 0x8c, 0xb7, 0xb9, 0x89, 0xbf, 0x86, 0x6e,
+	0xfb, 0x95, 0x41, 0xff, 0x03, 0x57, 0x61, 0x05, 0x00, 0x73, 0xcc, 0x06, 0x7e, 0x4f, 0xc7, 0x96,
+	0xae, 0xba, 0x5b, 0xed, 0x04, 0xed, 0xc3, 0xcd, 0x5f, 0xe6, 0xa8, 0x28, 0x90, 0x3b, 0x42, 0x58,
+	0x15, 0xcb, 0x74, 0x7d, 0xee, 0x85
+};
+
+// 2 1 4 -> 20 : 5b ed 04 ed c3 cd 5f e6 a8 28 90 3b 42 58 15 cb 74 7d ee 85
+uint8_t fply_4[] = {
+	0x46, 0x50, 0x4c, 0x59, 0x02, 0x01, 0x04, 0x00, 0x00, 0x00, 0x00, 0x14, 0x5b,
+	0xed, 0x04, 0xed, 0xc3, 0xcd, 0x5f, 0xe6, 0xa8, 0x28, 0x90, 0x3b, 0x42, 0x58, 0x15, 0xcb, 0x74,
+	0x7d, 0xee, 0x85
+};
+
 #define AUTH_REALM "AirPlay"
 #define AUTH_REQUIRED "WWW-Authenticate: Digest realm=\""  AUTH_REALM  "\", nonce=\"%s\"\r\n"
 
@@ -232,6 +278,7 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 	int require_auth = 0;
 	char responseHeader[4096];
 	char responseBody[4096];
+        int  responseLength = 0;
 
 	const char * uri = http_request_get_url(request);
 	method = http_request_get_method(request);
@@ -646,7 +693,7 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 	else if (strcmp(uri, "/server-info") == 0)
 	{
 		logger_log(conn->airplay->logger, LOGGER_INFO, "AIRPLAY: got request %s", uri);
-		sprintf(responseBody, conn->airplay->hwaddr);
+		sprintf(responseBody, "%s\r\n", conn->airplay->hwaddr);
 		sprintf(responseHeader, "Content-Type: text/x-apple-plist+xml\r\n");
 	}
 
@@ -672,7 +719,83 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 
 	else if (strcmp(uri, "/fp-setup") == 0)
 	{
-		status = AIRPLAY_STATUS_PRECONDITION_FAILED;
+		//status = AIRPLAY_STATUS_PRECONDITION_FAILED;
+#if 1
+		const char *data;
+		int datalen, size;
+                char *buf;
+
+		extern unsigned char * send_fairplay_query(int cmd, unsigned char *data, int len, int *size_p);
+
+		data = http_request_get_data(request, &datalen);
+		logger_log(conn->airplay->logger, LOGGER_INFO, "Got %d bytes data", datalen);
+
+	        buf = send_fairplay_query((datalen==16?1:2), data, datalen, &size);
+
+		if (buf) {
+		  memcpy(responseBody, buf, size);
+		  responseLength = size;
+                }
+#else
+
+		uint8_t fply_header[12];
+		const char *data;
+		int datalen;
+
+		data = http_request_get_data(request, &datalen);
+		logger_log(conn->airplay->logger, LOGGER_INFO, "Got %d bytes data", datalen);
+		//  [content getBytes:fply_header length:sizeof(fply_header)];
+
+		logger_log(conn->airplay->logger, LOGGER_INFO, "Memcpy %d bytes from data (size: %d) to fply_header (size: %d)", sizeof(fply_header), datalen, sizeof(fply_header));
+		memcpy(fply_header, data, sizeof(fply_header));
+
+		/*NSRange payload_range = {
+		  .location = sizeof(fply_header),
+		  .length = [content length] - sizeof(fply_header),
+		  };*/
+
+		// payload points to data[sizeof(fply_header)] and is datalen - sizeof(fply_header) bytes long (up to the end of data)
+		// payload is data without 12 byte header
+
+		//NSData *payload = [content subdataWithRange:payload_range];
+		//                NSLog(@" fply seq:%u len:%u %@", fply_header[6], fply_header[11], payload);
+		extern char * handle_fpsetup(char *data, int len);
+
+	        handle_fpsetup(data, datalen);
+
+		if (fply_header[6] == 1) {
+			/*
+			   NSRange fply_id_range =
+			   {
+			   .location = 12 + 2,
+			   .length = 1,
+			   };
+			   [content getBytes:fply_2 + 13 range:fply_id_range];*/
+			logger_log(conn->airplay->logger, LOGGER_INFO, "Memcpy %d bytes from data + 14 (sizeleft: %d) to fply_2 + 14 (sizeleft: %d)", 1, datalen-14, sizeof(fply_2)-24);
+			memcpy(&fply_2[13], &data[12 + 2], 1);
+
+			/*data = [NSData dataWithBytesNoCopy:fply_2 length:sizeof(fply_2) freeWhenDone:NO];
+			  [self replyOK:sock withHeaders:nil withData:data];*/
+			strcpy(responseBody, (char *)fply_2);
+
+		} else if (fply_header[6] == 3) {
+			/*NSRange fply_4_range = {
+			  .location = [payload length] - 20,
+			  .length = 20,
+			  };*/
+
+			//fply_4_range points to the last 20 bytes of data
+
+			//data = [NSMutableData dataWithBytes:fply_4 length:12];
+			//[data appendData:[payload subdataWithRange:fply_4_range]];
+			logger_log(conn->airplay->logger, LOGGER_INFO, "Memcpy %d bytes from data + datalen - 20 (sizeleft: %d) to fply_4 + 12 (sizeleft: %d)", 20, datalen-20, sizeof(fply_4)-12);
+
+			memcpy(&fply_4[12], &data[datalen - 20], 20);
+
+			//[self replyOK:sock withHeaders:nil withData:data];
+			strcpy(responseBody, (char *)fply_4);
+		}
+#endif
 	}  
 
 	else if (strcmp(uri, "200") == 0) //response OK from the event reverse message
@@ -719,22 +842,28 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 	char resbuf[4096];
 	const time_t ltime = time(NULL);
 	char *date = asctime(gmtime(&ltime)); //Fri, 17 Dec 2010 11:18:01 GMT;
+        int headerLength = 0;
 	date[strlen(date) - 1] = '\0'; // remove \n
 	sprintf(resbuf, "HTTP/1.1 %d %s\nDate: %s\r\n", status, statusMsg, date);
 	if (responseHeader[0] != '\0') 
 	{
 		strcat(resbuf, responseHeader);
 	}
+        headerLength = strlen(resbuf);
+  
+        if (responseLength == 0) responseLength = strlen(responseBody); 
 
-	sprintf(resbuf, "%sContent-Length: %ld\r\n\r\n", resbuf, strlen(responseBody));
+	sprintf(resbuf, "%sContent-Length: %ld\r\n\r\n", resbuf, responseLength);
 
 	if (responseBody[0] != '\0')
 	{
-		strcat(resbuf, responseBody);
+		//strcat(resbuf, responseBody);
+           memcpy(resbuf + strlen(resbuf), responseBody, responseLength);
 	}
 
 	http_response_t *res;
-	res = http_response_init1(resbuf, strlen(resbuf));
+	//res = http_response_init1(resbuf, strlen(resbuf));
+	res = http_response_init1(resbuf, headerLength + responseLength);
 
 	logger_log(conn->airplay->logger, LOGGER_DEBUG, "AIRPLAY Handled request %s with URL %s", method, http_request_get_url(request));
 	*response = res;

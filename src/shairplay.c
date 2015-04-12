@@ -207,7 +207,7 @@ audio_process(void *cls, void *opaque, const void *buffer, int buflen)
 	int processed;
 
 	if (session->buffering) {
-		printf("Buffering...\n");
+		printf("Buffering... %d %d\n", session->buflen + buflen, sizeof(session->buffer));
 		if (session->buflen+buflen < sizeof(session->buffer)) {
 			memcpy(session->buffer+session->buflen, buffer, buflen);
 			session->buflen += buflen;

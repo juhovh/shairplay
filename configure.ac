@@ -79,6 +79,7 @@ AC_CONFIG_FILES(
 	[src/Makefile]
 	[src/lib/Makefile]
 	[src/lib/alac/Makefile]
+	[src/lib/aac_eld/Makefile]
 	[src/lib/crypto/Makefile]
 )
 AC_OUTPUT
