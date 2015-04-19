@@ -27,7 +27,8 @@ libshairplay_la_LDFLAGS = -no-undefined -version-info 0:0:0
 
 libshairplay_la_LIBADD += $(LIBADD_DLOPEN)
 libshairplay_la_LIBADD += $(LIBM) 
-libshairplay_la_LIBADD +=  -lfdk-aac
+libshairplay_la_LIBADD +=  -lfdk-aac 
+libshairplay_la_LIBADD +=  -lplist 
 
 if OS_WIN32
 libshairplay_la_CPPFLAGS += -DDLL_EXPORT

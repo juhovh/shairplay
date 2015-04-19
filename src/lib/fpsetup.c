@@ -14,7 +14,7 @@ static void print_buf(unsigned char *data, int len)
 }
 
 #define SERVER_PORT 19999
-unsigned char * send_fairplay_query(int cmd, unsigned char *data, int len, int *size_p)
+unsigned char * send_fairplay_query(int cmd, const unsigned char *data, int len, int *size_p)
 {
 	int sock_fd = 0;
 	unsigned char recvbuf[1024] = {0};
@@ -65,7 +65,7 @@ unsigned char * send_fairplay_query(int cmd, unsigned char *data, int len, int *
 
 int airplay_decrypt(AES_KEY *ctx, unsigned char *in, unsigned int len, unsigned char *out)
 {
-	char *pin,*pout;
+	unsigned char *pin,*pout;
 	unsigned int n;
 	unsigned char k;
 	int i,remain = 0;
@@ -74,6 +74,8 @@ int airplay_decrypt(AES_KEY *ctx, unsigned char *in, unsigned int len, unsigned 
 	if (l == 0) return 0;
 
 	pin = in; pout = out;
+
+	fprintf(stderr, "remain=%d\n", ctx->remain_bytes);
 
 	if (ctx->remain_bytes) {
 		n = ctx->remain_bytes;
@@ -90,11 +92,11 @@ int airplay_decrypt(AES_KEY *ctx, unsigned char *in, unsigned int len, unsigned 
 
 	if (l <= 15) {
 		remain = l;
-		AES_ecb_encrypt(ctx->in, ctx->out, ctx, AES_ENCRYPT);
+		AES_ecb_encrypt(&ctx->in, &ctx->out, ctx, AES_ENCRYPT);
 	} else {
 		len1 = l;
 		do {
-			AES_ecb_encrypt(ctx->in, ctx->out, ctx, AES_ENCRYPT);
+			AES_ecb_encrypt(&ctx->in, &ctx->out, ctx, AES_ENCRYPT);
 			i = 15;
 			do {
 				k = ctx->in[i] + 1;
@@ -118,7 +120,7 @@ int airplay_decrypt(AES_KEY *ctx, unsigned char *in, unsigned int len, unsigned 
 		pin = in + i;
 		pout = out + i;
 */
-		AES_ecb_encrypt(ctx->in, ctx->out, ctx, 1);
+		AES_ecb_encrypt(&ctx->in, &ctx->out, ctx, 1);
 		remain = l;
 	}
 
@@ -130,7 +132,7 @@ int airplay_decrypt(AES_KEY *ctx, unsigned char *in, unsigned int len, unsigned 
 		-- i;
 	} while (i != -1);
 
-	for (i=0; i<l; i++)
+	for (i=0; i<remain; i++)
 	{
 		pout[i] = pin[i] ^ ctx->out[i];
 	}

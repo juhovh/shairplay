@@ -124,8 +124,11 @@ void new_AES_encrypt(const unsigned char *in, unsigned char *out,
 void new_AES_decrypt(const unsigned char *in, unsigned char *out,
 	const AES_KEY *key);
 
-void AES_ecb_encrypt(const unsigned char *in, unsigned char *out,
+void new_AES_ecb_encrypt(const unsigned char *in, unsigned char *out,
 	const AES_KEY *key, const int enc);
+void new_AES_cbc_encrypt(const unsigned char *in, unsigned char *out,
+		     size_t len, const AES_KEY *key,
+		     unsigned char *ivec, const int enc);
 
 /**************************************************************************
  * RC4 declarations 

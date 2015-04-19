@@ -49,6 +49,7 @@ http_response_add_data(http_response_t *response, const char *data, int datalen)
 	}
 	memcpy(response->data+response->data_length, data, datalen);
 	response->data_length += datalen;
+	response->data[response->data_length] = 0;
 }
 
 

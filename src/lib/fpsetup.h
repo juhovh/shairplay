@@ -15,6 +15,6 @@
 #ifndef FPSETUP_H
 #define FPSETUP_H
 
-unsigned char * send_fairplay_query(int cmd, unsigned char *data, int len, int *size_p);
+unsigned char * send_fairplay_query(int cmd, const unsigned char *data, int len, int *size_p);
 
 #endif

@@ -26,6 +26,7 @@ struct httpd_callbacks_s {
 	void* (*conn_init)(void *opaque, unsigned char *local, int locallen, unsigned char *remote, int remotelen);
 	void  (*conn_request)(void *ptr, http_request_t *request, http_response_t **response);
 	void  (*conn_destroy)(void *ptr);
+	void  (*conn_datafeed)(void *ptr, unsigned char *data, int size);
 };
 typedef struct httpd_callbacks_s httpd_callbacks_t;
 
@@ -39,5 +40,7 @@ void httpd_stop(httpd_t *httpd);
 
 void httpd_destroy(httpd_t *httpd);
 
+int httpd_get_mirror_streaming(httpd_t *httpd);
+void httpd_set_mirror_streaming(httpd_t *httpd);
 
 #endif

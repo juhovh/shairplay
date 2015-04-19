@@ -382,7 +382,7 @@ main(int argc, char *argv[])
 		password = options.password;
 	}
 	airplay_set_log_level(airplay, AIRPLAY_LOG_DEBUG);
-	airplay_start(airplay, &options.port_airplay, options.hwaddr, sizeof(options.hwaddr), password);
+//	airplay_start(airplay, &options.port_airplay, options.hwaddr, sizeof(options.hwaddr), password);
 
 	error = 0;
 	dnssd = dnssd_init(&error);
@@ -398,7 +398,7 @@ main(int argc, char *argv[])
 	}
 
 	dnssd_register_raop(dnssd, options.apname, options.port_raop, options.hwaddr, sizeof(options.hwaddr), 0);
-	dnssd_register_airplay(dnssd, options.apname, options.port_airplay, options.hwaddr, sizeof(options.hwaddr));
+//	dnssd_register_airplay(dnssd, options.apname, options.port_airplay, options.hwaddr, sizeof(options.hwaddr));
 
 	running = 1;
 	while (running) {
@@ -410,14 +410,14 @@ main(int argc, char *argv[])
 	}
 
 	dnssd_unregister_raop(dnssd);
-	dnssd_unregister_airplay(dnssd);
+//	dnssd_unregister_airplay(dnssd);
 	dnssd_destroy(dnssd);
 
 	raop_stop(raop);
 	raop_destroy(raop);
 
-	airplay_stop(airplay);
-	airplay_destroy(airplay);
+//	airplay_stop(airplay);
+//	airplay_destroy(airplay);
 
 	ao_shutdown();
 

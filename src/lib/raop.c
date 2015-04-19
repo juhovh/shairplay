@@ -161,6 +161,7 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 
 	logger_log(conn->raop->logger, LOGGER_DEBUG, "http request %s %s", method, uri);
 	http_request_dump_headers(request);
+	logger_log(conn->raop->logger, LOGGER_DEBUG, "data %s", http_request_get_data(request, NULL));
 
 	res = http_response_init("RTSP/1.0", 200, "OK");
 
@@ -241,7 +242,8 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 		responseData = data;
 		responseDataLen = datalen;
 	} else if (!strcmp(method, "OPTIONS")) {
-		http_response_add_header(res, "Public", "ANNOUNCE, SETUP, RECORD, PAUSE, FLUSH, TEARDOWN, OPTIONS, GET_PARAMETER, SET_PARAMETER");
+//		http_response_add_header(res, "Public", "ANNOUNCE, SETUP, RECORD, PAUSE, FLUSH, TEARDOWN, OPTIONS, GET_PARAMETER, SET_PARAMETER");
+		http_response_add_header(res, "Public", "ANNOUNCE, SETUP, RECORD, PAUSE, FLUSH, TEARDOWN, OPTIONS, GET_PARAMETER, SET_PARAMETER, POST, GET");
 	} else if (!strcmp(method, "ANNOUNCE")) {
 		const char *data;
 		int datalen;
@@ -439,7 +441,7 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
         }
 	http_response_finish(res, responseData, responseDataLen);
 
-	logger_log(conn->raop->logger, LOGGER_DEBUG, "Handled", method);
+	logger_log(conn->raop->logger, LOGGER_DEBUG, "\nResponse:\n%s", http_response_get_data(res, &responseDataLen));
 	*response = res;
 }
 

@@ -45,12 +45,14 @@ struct httpd_s {
 	int joined;
 	thread_handle_t thread;
 	mutex_handle_t run_mutex;
+	unsigned short port;
+	int is_mirror;
+	int stream_start;
 
 	/* Server fds for accepting connections */
 	int server_fd4;
 	int server_fd6;
 
-	unsigned short port;
 };
 
 httpd_t *
@@ -148,8 +150,8 @@ httpd_accept_connection(httpd_t *httpd, int server_fd, int is_ipv6)
 		return 0;
 	}
 
-	logger_log(httpd->logger, LOGGER_INFO, "Accepted %s client on socket %d",
-	           (is_ipv6 ? "IPv6"  : "IPv4"), fd);
+	logger_log(httpd->logger, LOGGER_INFO, "Accepted %s %s client on socket %d",
+	           httpd->is_mirror?"Mirroring":"", (is_ipv6 ? "IPv6"  : "IPv4"), fd);
 	local = netutils_get_address(&local_saddr, &local_len);
 	remote = netutils_get_address(&remote_saddr, &remote_len);
 
@@ -168,6 +170,8 @@ httpd_remove_connection(httpd_t *httpd, http_connection_t *connection)
 	shutdown(connection->socket_fd, SHUT_WR);
 	closesocket(connection->socket_fd);
 	connection->connected = 0;
+	/* for mirroring server, only one connection */
+	if (httpd->is_mirror) httpd->stream_start = 0;
 	httpd->open_connections--;
 }
 
@@ -269,11 +273,15 @@ httpd_thread(void *arg)
 				assert(connection->request);
 			}
 
-			logger_log(httpd->logger, LOGGER_DEBUG, "Receiving on socket %d", connection->socket_fd);
 			ret = recv(connection->socket_fd, buffer, sizeof(buffer), 0);
+			logger_log(httpd->logger, LOGGER_DEBUG, "Receiving on socket %d, %d bytes", connection->socket_fd, ret);
 			if (ret == 0) {
 				logger_log(httpd->logger, LOGGER_INFO, "Connection closed for socket %d", connection->socket_fd);
 				httpd_remove_connection(httpd, connection);
+				continue;
+			}
+			if (httpd_get_mirror_streaming(httpd)) {
+				httpd->callbacks.conn_datafeed(connection->user_data, buffer, ret);
 				continue;
 			}
 
@@ -400,6 +408,8 @@ httpd_start(httpd_t *httpd, unsigned short *port)
 	httpd->running = 1;
 	httpd->joined = 0;
 	httpd->port = *port;
+	httpd->is_mirror = (httpd->port == 7100);
+	httpd->stream_start = 0;
 	THREAD_CREATE(httpd->thread, httpd_thread, httpd);
 	MUTEX_UNLOCK(httpd->run_mutex);
 
@@ -431,6 +441,7 @@ httpd_stop(httpd_t *httpd)
 		return;
 	}
 	httpd->running = 0;
+	httpd->stream_start = 0;
 	MUTEX_UNLOCK(httpd->run_mutex);
 
 	THREAD_JOIN(httpd->thread);
@@ -440,3 +451,26 @@ httpd_stop(httpd_t *httpd)
 	MUTEX_UNLOCK(httpd->run_mutex);
 }
 
+int
+httpd_get_mirror_streaming(httpd_t *httpd)
+{
+	int status;
+
+	assert(httpd);
+
+	MUTEX_LOCK(httpd->run_mutex);
+	status = httpd->is_mirror && httpd->stream_start;
+	MUTEX_UNLOCK(httpd->run_mutex);
+
+	return status;
+}
+
+void
+httpd_set_mirror_streaming(httpd_t *httpd)
+{
+	assert(httpd && httpd->is_mirror);
+
+	MUTEX_LOCK(httpd->run_mutex);
+	httpd->stream_start = 1;
+	MUTEX_UNLOCK(httpd->run_mutex);
+}

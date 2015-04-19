@@ -3,9 +3,9 @@
 
 #define RAOP_TXTVERS "1"
 #define RAOP_CH "2"             /* Audio channels: 2 */
-//#define RAOP_CN "0,1"           /* Audio codec: PCM, ALAC */
+#define RAOP_CN "0,1"           /* Audio codec: PCM, ALAC */
 //#define RAOP_CN "0,1,2,3"           /* Audio codec: PCM, ALAC */
-#define RAOP_CN "0,1,3"           /* Audio codec: PCM, ALAC */
+//#define RAOP_CN "0,1,3"           /* Audio codec: PCM, ALAC */
 #define RAOP_ET "0,1"           /* Encryption type: none, RSA */
 //#define RAOP_ET "0,3,5"           /* Encryption type: none, RSA */
 #define RAOP_SV "false"
@@ -23,6 +23,6 @@
 //#define RAOP_VS "150.33"
 //#define RAOP_AM "AppleTV3,1"
 #define RAOP_VS "130.14"
-#define RAOP_AM "AppleTV2,1"
+#define RAOP_AM "Shairport,1"
 
 #endif
