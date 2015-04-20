@@ -55,6 +55,7 @@ Usage: shairplay [OPTION...]
       --ao_driver=driver          Sets the ao driver (optional)
       --ao_devicename=devicename  Sets the ao device name (optional)
       --ao_deviceid=id            Sets the ao device id (optional)
+      --enable_airplay            Start airplay service
   -h, --help                      This help
 ```
 
