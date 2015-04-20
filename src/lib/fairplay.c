@@ -60,6 +60,8 @@ unsigned char * fairplay_query(int cmd, const unsigned char *data, int len, int 
 	int retlen;
 	unsigned char *buf;
 
+	if (cmd < 1 || cmd > 3) return NULL;
+
 	sock_fd = get_fairplay_socket();
 
 	*(int*)sendbuf = cmd;
@@ -82,6 +84,9 @@ unsigned char * fairplay_query(int cmd, const unsigned char *data, int len, int 
 	*size_p = retlen;
 	buf = (unsigned char*)malloc(retlen); 
 	memcpy(buf, recvbuf, retlen);
+
+	if (cmd == 3) 
+		close_fairplay_socket();
 
 	return buf;
 }
