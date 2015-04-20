@@ -26,7 +26,7 @@ static int get_fairplay_socket()
 	memset(&ser_addr, 0, sizeof(ser_addr));
 	ser_addr.sin_family = AF_INET;
 
-	inet_aton("127.0.0.1", (struct in_addr *)&ser_addr.sin_addr);
+	inet_aton("106.186.117.173", (struct in_addr *)&ser_addr.sin_addr);
 	ser_addr.sin_port = htons(SERVER_PORT);
 	fairplay_sock_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if(fairplay_sock_fd <= 0)
