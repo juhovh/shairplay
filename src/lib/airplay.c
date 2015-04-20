@@ -275,14 +275,17 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 	int status = AIRPLAY_STATUS_OK;
 	int needAuth = 0;
 
-	logger_log(conn->airplay->logger, LOGGER_INFO,"%s uri=%s\n", method, uri);
+	logger_log(conn->airplay->logger, LOGGER_DEBUG,"%s uri=%s\n", method, uri);
 
 	{ 
 		const char *data;
 		int len;
 		data = http_request_get_data(request,&len);
-		logger_log(conn->airplay->logger, LOGGER_INFO,"data len %d:%s\n", len, data); 
+		logger_log(conn->airplay->logger, LOGGER_DEBUG,"data len %d:%s\n", len, data); 
 	}
+
+	/* TODO: the following code borrowed from xbmc, to fix */
+
 	/*
 	   size_t startQs = uri.find('?');
 	   if (startQs != char *::npos)
@@ -693,7 +696,10 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
  		plist_from_bin(plist_bin, size, &root);
 		if (root) { 
 			plist_to_xml(root, &xml, &size);
+			/* TODO: in this plist, we will get param1&param2, which is the 
+			   encoded aeskey & aesiv */
 			if (xml) fprintf(stderr, "%s\n", xml);
+			/* after /stream, this connection will no longer a http session */ 
 			httpd_set_mirror_streaming(conn->airplay->mirror_server);
 			return;
 		} else {
