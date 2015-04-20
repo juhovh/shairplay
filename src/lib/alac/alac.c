@@ -773,6 +773,11 @@ void alac_decode_frame(alac_file *alac,
 
     channels = readbits(alac, 3);
 
+    if (channels != 1) {
+	fprintf(stderr, "wrong channels %d\n", channels);
+	return;
+    }
+
     *outputsize = outputsamples * alac->bytespersample;
 
     switch(channels)
@@ -981,6 +986,10 @@ void alac_decode_frame(alac_file *alac,
             /* now read the number of samples,
              * as a 32bit integer */
             outputsamples = readbits(alac, 32);
+	    if (outputsamples < 0 || outputsamples > alac->setinfo_max_samples_per_frame) {
+	    	fprintf(stderr, "wrong outputsamples %d\n", outputsamples);
+		return;
+	    }
             *outputsize = outputsamples * alac->bytespersample;
         }
 
@@ -1030,6 +1039,11 @@ void alac_decode_frame(alac_file *alac,
             {
                 predictor_coef_table_b[i] = (int16_t)readbits(alac, 16);
             }
+
+	    if (prediction_type_a != 0 || prediction_type_b != 0) {
+		fprintf(stderr, "prediction type %d %d!\n", prediction_type_a, prediction_type_b);
+		return;
+	    }
 
             /*********************/
             if (uncompressed_bytes)
