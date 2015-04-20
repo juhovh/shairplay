@@ -4,7 +4,13 @@ Free portable AirPlay server implementation similar to [ShairPort](https://githu
 
 Currently only AirPort Express emulation is supported.
 
-Update: Experimental support for fairplay protocol and airplay ongoing... 
+Update by foxsen, 2015/4/20: 
+Experimental support for fairplay protocol and airplay:
+  * fairplay encrpted audio is supported (et == 3)
+  * AAC-ELD audio is supported
+  * airplay service framework is added, up to the point that the mirroring 
+    connection starts streaming. But the UI and callbacks to be done.
+  * fairplay support is performed via interactions with a server
 
 Disclaimer
 ----------
@@ -20,7 +26,8 @@ First you need to install some dependencies, for example on Ubuntu you would
 write:
 ```
 sudo apt-get install autoconf automake libtool
-sudo apt-get install libltdl-dev libao-dev libavahi-compat-libdnssd-dev
+sudo apt-get install libltdl-dev libao-dev libavahi-compat-libdnssd-dev \
+			libplist-dev libfdk-aac-dev
 sudo apt-get install avahi-daemon
 ```
 
