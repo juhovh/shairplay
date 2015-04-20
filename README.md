@@ -4,6 +4,8 @@ Free portable AirPlay server implementation similar to [ShairPort](https://githu
 
 Currently only AirPort Express emulation is supported.
 
+Update: Experimental support for fairplay protocol and airplay ongoing... 
+
 Disclaimer
 ----------
 All the resources in this repository are written using only freely available

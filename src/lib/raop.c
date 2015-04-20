@@ -29,7 +29,7 @@
 #include "netutils.h"
 #include "logger.h"
 #include "compat.h"
-#include "fpsetup.h"
+#include "fairplay.h"
 
 /* Actually 345 bytes for 2048-bit key */
 #define MAX_SIGNATURE_LEN 512
@@ -227,7 +227,7 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
                 char *buf;
 
 		data = http_request_get_data(request, &datalen);
-	        buf = send_fairplay_query((datalen==16?1:2), data, datalen, &size);
+	        buf = fairplay_query((datalen==16?1:2), data, datalen, &size);
 
 		if (buf) {
 		  responseData = buf;
@@ -284,7 +284,7 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 				conn->et = 3;
 				len = rsakey_base64_decode(raop->rsakey, &buf, fpaeskeystr);
 				if (buf && len == 72) {
-					p = send_fairplay_query(3, buf, len, &aeskeylen);
+					p = fairplay_query(3, buf, len, &aeskeylen);
 					if (aeskeylen == 16) 
 						memcpy(aeskey, p, aeskeylen);
 				} else {
