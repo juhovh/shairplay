@@ -50,6 +50,7 @@ typedef struct {
 	char ao_driver[56];
 	char ao_devicename[56];
 	char ao_deviceid[16];
+	int  enable_airplay;
 } shairplay_options_t;
 
 typedef struct {
@@ -276,6 +277,7 @@ parse_options(shairplay_options_t *opt, int argc, char *argv[])
 			opt->port_raop = atoi(*++argv);
 		} else if (!strncmp(arg, "--server_port=", 14)) {
 			opt->port_raop = atoi(arg+14);
+			opt->port_airplay = atoi(arg+14) + 2000;
 		} else if (!strncmp(arg, "--hwaddr=", 9)) {
 			if (parse_hwaddr(arg+9, opt->hwaddr, sizeof(opt->hwaddr))) {
 				fprintf(stderr, "Invalid format given for hwaddr, aborting...\n");
@@ -288,17 +290,20 @@ parse_options(shairplay_options_t *opt, int argc, char *argv[])
 			strncpy(opt->ao_devicename, arg+16, sizeof(opt->ao_devicename)-1);
 		} else if (!strncmp(arg, "--ao_deviceid=", 14)) {
 			strncpy(opt->ao_deviceid, arg+14, sizeof(opt->ao_deviceid)-1);
+		} else if (!strncmp(arg, "--enable_airplay", 16)) {
+			opt->enable_airplay = 1;
 		} else if (!strcmp(arg, "-h") || !strcmp(arg, "--help")) {
 			fprintf(stderr, "Shairplay version %s\n", VERSION);
 			fprintf(stderr, "Usage: %s [OPTION...]\n", path);
 			fprintf(stderr, "\n");
 			fprintf(stderr, "  -a, --apname=AirPort            Sets Airport name\n");
 			fprintf(stderr, "  -p, --password=secret           Sets password\n");
-			fprintf(stderr, "  -o, --server_port=5000          Sets port for RAOP service\n");
+			fprintf(stderr, "  -o, --server_port=5000          Sets port for RAOP service, port+2000 for AIRPLAY service\n");
 			fprintf(stderr, "      --hwaddr=address            Sets the MAC address, useful if running multiple instances\n");
 			fprintf(stderr, "      --ao_driver=driver          Sets the ao driver (optional)\n");
 			fprintf(stderr, "      --ao_devicename=devicename  Sets the ao device name (optional)\n");
 			fprintf(stderr, "      --ao_deviceid=id            Sets the ao device id (optional)\n");
+			fprintf(stderr, "      --enable_airplay            start airplay service\n");
 			fprintf(stderr, "  -h, --help                      This help\n");
 			fprintf(stderr, "\n");
 			return 1;
@@ -364,25 +369,25 @@ main(int argc, char *argv[])
 	raop_set_log_level(raop, RAOP_LOG_DEBUG);
 	raop_start(raop, &options.port_raop, options.hwaddr, sizeof(options.hwaddr), password);
 
-	memset(&airplay_cbs, 0, sizeof(airplay_cbs));
-	airplay_cbs.cls = &options;
-	airplay_cbs.audio_init = audio_init;
-	airplay_cbs.audio_process = audio_process;
-	airplay_cbs.audio_destroy = audio_destroy;
-	airplay_cbs.audio_set_volume = audio_set_volume;
+	if (options.enable_airplay) {
+		/* TODO: fix the callbacks */
+		memset(&airplay_cbs, 0, sizeof(airplay_cbs));
+		airplay_cbs.cls = &options;
+		airplay_cbs.audio_init = audio_init;
+		airplay_cbs.audio_process = audio_process;
+		airplay_cbs.audio_destroy = audio_destroy;
+		airplay_cbs.audio_set_volume = audio_set_volume;
 
-	airplay = airplay_init_from_keyfile(10, &airplay_cbs, "airport.key", NULL);
-	if (airplay == NULL) {
-		fprintf(stderr, "Could not initialize the AIRPLAY service\n");
-		fprintf(stderr, "Please make sure the airport.key file is in the current directory.\n");
-		return -1;
-	}
+		airplay = airplay_init_from_keyfile(10, &airplay_cbs, "airport.key", NULL);
+		if (airplay == NULL) {
+			fprintf(stderr, "Could not initialize the AIRPLAY service\n");
+			fprintf(stderr, "Please make sure the airport.key file is in the current directory.\n");
+			return -1;
+		}
 
-	if (strlen(options.password)) {
-		password = options.password;
+		airplay_set_log_level(airplay, AIRPLAY_LOG_DEBUG);
+		airplay_start(airplay, &options.port_airplay, options.hwaddr, sizeof(options.hwaddr), password);
 	}
-	airplay_set_log_level(airplay, AIRPLAY_LOG_DEBUG);
-//	airplay_start(airplay, &options.port_airplay, options.hwaddr, sizeof(options.hwaddr), password);
 
 	error = 0;
 	dnssd = dnssd_init(&error);
@@ -398,7 +403,8 @@ main(int argc, char *argv[])
 	}
 
 	dnssd_register_raop(dnssd, options.apname, options.port_raop, options.hwaddr, sizeof(options.hwaddr), 0);
-//	dnssd_register_airplay(dnssd, options.apname, options.port_airplay, options.hwaddr, sizeof(options.hwaddr));
+	if (options.enable_airplay)
+		dnssd_register_airplay(dnssd, options.apname, options.port_airplay, options.hwaddr, sizeof(options.hwaddr));
 
 	running = 1;
 	while (running) {
@@ -410,16 +416,17 @@ main(int argc, char *argv[])
 	}
 
 	dnssd_unregister_raop(dnssd);
-//	dnssd_unregister_airplay(dnssd);
+	if (options.enable_airplay) dnssd_unregister_airplay(dnssd);
 	dnssd_destroy(dnssd);
 
 	raop_stop(raop);
 	raop_destroy(raop);
-
-//	airplay_stop(airplay);
-//	airplay_destroy(airplay);
-
 	ao_shutdown();
+
+	if (options.enable_airplay) {
+		airplay_stop(airplay);
+		airplay_destroy(airplay);
+	}
 
 	return 0;
 }
