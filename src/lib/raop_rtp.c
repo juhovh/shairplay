@@ -52,7 +52,8 @@ struct raop_rtp_s {
 	int coverart_len;
 
 	int flush;
-	thread_handle_t thread;
+	thread_handle_t thread_rtp;
+	thread_handle_t thread_audio;
 	mutex_handle_t run_mutex;
 	/* MUTEX LOCKED VARIABLES END */
 
@@ -321,16 +322,16 @@ raop_rtp_process_events(raop_rtp_t *raop_rtp, void *cb_data)
 }
 
 static THREAD_RETVAL
-raop_rtp_thread_udp(void *arg)
+raop_rtp_audio_thread(void *arg)
 {
 	raop_rtp_t *raop_rtp = arg;
-	unsigned char packet[RAOP_PACKET_LEN];
-	unsigned int packetlen;
-	struct sockaddr_storage saddr;
-	socklen_t saddrlen;
 
 	const ALACSpecificConfig *config;
 	void *cb_data = NULL;
+	int no_resend = (raop_rtp->control_rport == 0);
+
+	const void *audiobuf;
+	int audiobuflen;
 
 	assert(raop_rtp);
 
@@ -339,15 +340,43 @@ raop_rtp_thread_udp(void *arg)
 	                               config->bitDepth,
 	                               config->numChannels,
 	                               config->sampleRate);
+	
+	while (1) {
+		/* Check if we are still running and process callbacks */
+		if (raop_rtp_process_events(raop_rtp, cb_data)) {
+		        logger_log(raop_rtp->logger, LOGGER_DEBUG, "rtp not running");
+			break;
+		}
+
+		/* play a frame in queue */
+		if ((audiobuf = raop_buffer_dequeue(raop_rtp->buffer, &audiobuflen, no_resend))) {
+			raop_rtp->callbacks.audio_process(raop_rtp->callbacks.cls, cb_data, audiobuf, audiobuflen);
+		}
+
+	}
+
+	raop_rtp->callbacks.audio_destroy(raop_rtp->callbacks.cls, cb_data);
+	logger_log(raop_rtp->logger, LOGGER_INFO, "Exiting RAOP audio thread");
+}
+
+static THREAD_RETVAL
+raop_rtp_thread_udp(void *arg)
+{
+	raop_rtp_t *raop_rtp = arg;
+	unsigned char packet[RAOP_PACKET_LEN];
+	unsigned int packetlen;
+	struct sockaddr_storage saddr;
+	socklen_t saddrlen;
+
+	assert(raop_rtp);
 
 	while(1) {
 		fd_set rfds;
 		struct timeval tv;
 		int nfds, ret;
 
-		/* Check if we are still running and process callbacks */
-		if (raop_rtp_process_events(raop_rtp, cb_data)) {
-		        logger_log(raop_rtp->logger, LOGGER_DEBUG, "rtp not running");
+		if (!raop_rtp->running) {
+			MUTEX_UNLOCK(raop_rtp->run_mutex);
 			break;
 		}
 
@@ -406,16 +435,9 @@ raop_rtp_thread_udp(void *arg)
 				int no_resend = (raop_rtp->control_rport == 0);
 				int ret;
 
-				const void *audiobuf;
-				int audiobuflen;
 
 				ret = raop_buffer_queue(raop_rtp->buffer, packet, packetlen, 1);
 				assert(ret >= 0);
-
-				/* Decode all frames in queue */
-				while ((audiobuf = raop_buffer_dequeue(raop_rtp->buffer, &audiobuflen, no_resend))) {
-					raop_rtp->callbacks.audio_process(raop_rtp->callbacks.cls, cb_data, audiobuf, audiobuflen);
-				}
 
 				/* Handle possible resend requests */
 				if (!no_resend) {
@@ -425,7 +447,6 @@ raop_rtp_thread_udp(void *arg)
 		} 
 	}
 	logger_log(raop_rtp->logger, LOGGER_INFO, "Exiting UDP RAOP thread");
-	raop_rtp->callbacks.audio_destroy(raop_rtp->callbacks.cls, cb_data);
 
 	return 0;
 }
@@ -438,24 +459,16 @@ raop_rtp_thread_tcp(void *arg)
 	unsigned char packet[RAOP_PACKET_LEN];
 	unsigned int packetlen = 0;
 
-	const ALACSpecificConfig *config;
-	void *cb_data = NULL;
-
 	assert(raop_rtp);
-
-	config = raop_buffer_get_config(raop_rtp->buffer);
-	cb_data = raop_rtp->callbacks.audio_init(raop_rtp->callbacks.cls,
-	                               config->bitDepth,
-	                               config->numChannels,
-	                               config->sampleRate);
 
 	while (1) {
 		fd_set rfds;
 		struct timeval tv;
 		int nfds, ret;
 
-		/* Check if we are still running and process callbacks */
-		if (raop_rtp_process_events(raop_rtp, cb_data)) {
+		MUTEX_LOCK(raop_rtp->run_mutex);
+		if (!raop_rtp->running) {
+			MUTEX_UNLOCK(raop_rtp->run_mutex);
 			break;
 		}
 
@@ -538,10 +551,6 @@ raop_rtp_thread_tcp(void *arg)
 			memmove(packet, packet+4+rtplen, packetlen-rtplen);
 			packetlen -= 4+rtplen;
 
-			/* Decode the received frame */
-			if ((audiobuf = raop_buffer_dequeue(raop_rtp->buffer, &audiobuflen, 1))) {
-				raop_rtp->callbacks.audio_process(raop_rtp->callbacks.cls, cb_data, audiobuf, audiobuflen);
-			}
 		}
 	}
 
@@ -551,7 +560,6 @@ raop_rtp_thread_tcp(void *arg)
 	}
 
 	logger_log(raop_rtp->logger, LOGGER_INFO, "Exiting TCP RAOP thread");
-	raop_rtp->callbacks.audio_destroy(raop_rtp->callbacks.cls, cb_data);
 
 	return 0;
 }
@@ -589,10 +597,11 @@ raop_rtp_start(raop_rtp_t *raop_rtp, int use_udp, unsigned short control_rport, 
 	raop_rtp->running = 1;
 	raop_rtp->joined = 0;
 	if (use_udp) {
-		THREAD_CREATE(raop_rtp->thread, raop_rtp_thread_udp, raop_rtp);
+		THREAD_CREATE(raop_rtp->thread_rtp, raop_rtp_thread_udp, raop_rtp);
 	} else {
-		THREAD_CREATE(raop_rtp->thread, raop_rtp_thread_tcp, raop_rtp);
+		THREAD_CREATE(raop_rtp->thread_rtp, raop_rtp_thread_tcp, raop_rtp);
 	}
+	THREAD_CREATE(raop_rtp->thread_audio, raop_rtp_audio_thread, raop_rtp);
 	MUTEX_UNLOCK(raop_rtp->run_mutex);
 }
 
@@ -683,7 +692,8 @@ raop_rtp_stop(raop_rtp_t *raop_rtp)
 	MUTEX_UNLOCK(raop_rtp->run_mutex);
 
 	/* Join the thread */
-	THREAD_JOIN(raop_rtp->thread);
+	THREAD_JOIN(raop_rtp->thread_rtp);
+	THREAD_JOIN(raop_rtp->thread_audio);
 	if (raop_rtp->csock != -1) closesocket(raop_rtp->csock);
 	if (raop_rtp->tsock != -1) closesocket(raop_rtp->tsock);
 	if (raop_rtp->dsock != -1) closesocket(raop_rtp->dsock);

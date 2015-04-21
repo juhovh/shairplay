@@ -25,12 +25,16 @@
 #include "crypto/crypto.h"
 #include "alac/alac.h"
 #include "aac_eld/aac_eld.h"
+#include "threads.h"
 
 #define RAOP_BUFFER_LENGTH 32
 
 typedef struct {
 	/* Packet available */
 	int available;
+
+	/* resend requested */
+	int resending;
 
 	/* RTP header */
 	unsigned char flags;
@@ -77,6 +81,9 @@ struct raop_buffer_s {
 
         /* audio codecs*/
         int cn;
+
+	/* mutex to serialize buffer accesses */
+	mutex_handle_t mutex;
 };
 
 
@@ -257,6 +264,8 @@ raop_buffer_init(const char *rtpmap,
 	raop_buffer->et = et;
 	raop_buffer->cn = cn;
 
+	MUTEX_CREATE(raop_buffer->mutex);
+
 	return raop_buffer;
 }
 
@@ -264,10 +273,12 @@ void
 raop_buffer_destroy(raop_buffer_t *raop_buffer)
 {
 	if (raop_buffer) {
+		MUTEX_UNLOCK(raop_buffer->mutex);
 		if (raop_buffer->cn == 1)
 		  destroy_alac(raop_buffer->alac);
                 else
 		  destroy_aac_eld(raop_buffer->aac_eld);
+		MUTEX_DESTROY(raop_buffer->mutex);
 		free(raop_buffer->buffer);
 		free(raop_buffer);
 	}
@@ -306,6 +317,8 @@ raop_buffer_queue(raop_buffer_t *raop_buffer, unsigned char *data, unsigned shor
 		return -1;
 	}
 
+	MUTEX_LOCK(raop_buffer->mutex);
+
 	/* Get correct seqnum for the packet */
 	if (use_seqnum) {
 		seqnum = (data[2] << 8) | data[3];
@@ -315,18 +328,23 @@ raop_buffer_queue(raop_buffer_t *raop_buffer, unsigned char *data, unsigned shor
 
 	/* If this packet is too late, just skip it */
 	if (!raop_buffer->is_empty && seqnum_cmp(seqnum, raop_buffer->first_seqnum) < 0) {
+		MUTEX_UNLOCK(raop_buffer->mutex);
 		return 0;
 	}
 
 	/* Check that there is always space in the buffer, otherwise flush */
 	if (seqnum_cmp(seqnum, raop_buffer->first_seqnum+RAOP_BUFFER_LENGTH) >= 0) {
+		MUTEX_UNLOCK(raop_buffer->mutex);
+		fprintf(stderr, "buffer overrun!\n");
 		raop_buffer_flush(raop_buffer, seqnum);
+		MUTEX_LOCK(raop_buffer->mutex);
 	}
 
 	/* Get entry corresponding our seqnum */
 	entry = &raop_buffer->entries[seqnum % RAOP_BUFFER_LENGTH];
 	if (entry->available && seqnum_cmp(entry->seqnum, seqnum) == 0) {
 		/* Packet resend, we can safely ignore */
+		MUTEX_UNLOCK(raop_buffer->mutex);
 		return 0;
 	}
 
@@ -339,6 +357,7 @@ raop_buffer_queue(raop_buffer_t *raop_buffer, unsigned char *data, unsigned shor
 	entry->ssrc = (data[8] << 24) | (data[9] << 16) |
 	              (data[10] << 8) | data[11];
 	entry->available = 1;
+	entry->resending = 0;
 	
 	/* Decrypt audio data */
 	encryptedlen = (datalen-12)/16*16;
@@ -353,7 +372,10 @@ raop_buffer_queue(raop_buffer_t *raop_buffer, unsigned char *data, unsigned shor
 		alac_decode_frame(raop_buffer->alac, packetbuf, entry->audio_buffer, &outputlen);
         else if (raop_buffer->cn == 3)
 		aac_eld_decode_frame(raop_buffer->aac_eld, packetbuf, datalen - 12, entry->audio_buffer, &outputlen);
-	else return -3;
+	else {
+		MUTEX_UNLOCK(raop_buffer->mutex);
+		return -3;
+	}
 
 	entry->audio_buffer_len = outputlen;
 
@@ -366,6 +388,7 @@ raop_buffer_queue(raop_buffer_t *raop_buffer, unsigned char *data, unsigned shor
 	if (seqnum_cmp(seqnum, raop_buffer->last_seqnum) > 0) {
 		raop_buffer->last_seqnum = seqnum;
 	}
+	MUTEX_UNLOCK(raop_buffer->mutex);
 	return 1;
 }
 
@@ -375,11 +398,13 @@ raop_buffer_dequeue(raop_buffer_t *raop_buffer, int *length, int no_resend)
 	short buflen;
 	raop_buffer_entry_t *entry;
 
+	MUTEX_LOCK(raop_buffer->mutex);
 	/* Calculate number of entries in the current buffer */
 	buflen = seqnum_cmp(raop_buffer->last_seqnum, raop_buffer->first_seqnum)+1;
 
 	/* Cannot dequeue from empty buffer */
 	if (raop_buffer->is_empty || buflen <= 0) {
+		MUTEX_UNLOCK(raop_buffer->mutex);
 		return NULL;
 	}
 
@@ -391,6 +416,7 @@ raop_buffer_dequeue(raop_buffer_t *raop_buffer, int *length, int no_resend)
 		/* Check how much we have space left in the buffer */
 		if (buflen < RAOP_BUFFER_LENGTH) {
 			/* Return nothing and hope resend gets on time */
+			MUTEX_UNLOCK(raop_buffer->mutex);
 			return NULL;
 		}
 		/* Risk of buffer overrun, return empty buffer */
@@ -402,13 +428,18 @@ raop_buffer_dequeue(raop_buffer_t *raop_buffer, int *length, int no_resend)
 		/* Return an empty audio buffer to skip audio */
 		*length = entry->audio_buffer_size;
 		memset(entry->audio_buffer, 0, *length);
+		MUTEX_UNLOCK(raop_buffer->mutex);
 		return entry->audio_buffer;
 	}
 	entry->available = 0;
+	entry->resending = 0;
 
 	/* Return entry audio buffer */
 	*length = entry->audio_buffer_len;
 	entry->audio_buffer_len = 0;
+
+	MUTEX_UNLOCK(raop_buffer->mutex);
+
 	return entry->audio_buffer;
 }
 
@@ -420,21 +451,25 @@ raop_buffer_handle_resends(raop_buffer_t *raop_buffer, raop_resend_cb_t resend_c
 	assert(raop_buffer);
 	assert(resend_cb);
 
+	MUTEX_LOCK(raop_buffer->mutex);
 	if (seqnum_cmp(raop_buffer->first_seqnum, raop_buffer->last_seqnum) < 0) {
 		int seqnum, count;
 
 		for (seqnum=raop_buffer->first_seqnum; seqnum_cmp(seqnum, raop_buffer->last_seqnum)<0; seqnum++) {
 			entry = &raop_buffer->entries[seqnum % RAOP_BUFFER_LENGTH];
-			if (entry->available) {
+			if (entry->available || entry->resending) {
 				break;
 			}
+			entry->resending = 1;
 		}
 		if (seqnum_cmp(seqnum, raop_buffer->first_seqnum) == 0) {
+			MUTEX_UNLOCK(raop_buffer->mutex);
 			return;
 		}
 		count = seqnum_cmp(seqnum, raop_buffer->first_seqnum);
 		resend_cb(opaque, raop_buffer->first_seqnum, count);
 	}
+	MUTEX_UNLOCK(raop_buffer->mutex);
 }
 
 void
@@ -444,8 +479,10 @@ raop_buffer_flush(raop_buffer_t *raop_buffer, int next_seq)
 
 	assert(raop_buffer);
 
+	MUTEX_LOCK(raop_buffer->mutex);
 	for (i=0; i<RAOP_BUFFER_LENGTH; i++) {
 		raop_buffer->entries[i].available = 0;
+		raop_buffer->entries[i].resending = 0;
 		raop_buffer->entries[i].audio_buffer_len = 0;
 	}
 	if (next_seq < 0 || next_seq > 0xffff) {
@@ -454,4 +491,5 @@ raop_buffer_flush(raop_buffer_t *raop_buffer, int next_seq)
 		raop_buffer->first_seqnum = next_seq;
 		raop_buffer->last_seqnum = next_seq-1;
 	}
+	MUTEX_UNLOCK(raop_buffer->mutex);
 }
