@@ -192,7 +192,7 @@ raop_buffer_init(const char *rtpmap,
 	}
 
 	/* Initialize ALAC decoder */
-	raop_buffer->alac = create_alac(alacConfig->bitDepth,
+	raop_buffer->alac = alac_create(alacConfig->bitDepth,
 	                                alacConfig->numChannels);
 	if (!raop_buffer->alac) {
 		free(raop_buffer->buffer);
@@ -214,7 +214,7 @@ void
 raop_buffer_destroy(raop_buffer_t *raop_buffer)
 {
 	if (raop_buffer) {
-		destroy_alac(raop_buffer->alac);
+		alac_free(raop_buffer->alac);
 		free(raop_buffer->buffer);
 		free(raop_buffer);
 	}
@@ -294,7 +294,8 @@ raop_buffer_queue(raop_buffer_t *raop_buffer, unsigned char *data, unsigned shor
 
 	/* Decode ALAC audio data */
 	outputlen = entry->audio_buffer_size;
-	decode_frame(raop_buffer->alac, packetbuf, entry->audio_buffer, &outputlen);
+	alac_decode_frame(raop_buffer->alac, packetbuf,
+	                  entry->audio_buffer, &outputlen);
 	entry->audio_buffer_len = outputlen;
 
 	/* Update the raop_buffer seqnums */
