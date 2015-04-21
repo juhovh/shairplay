@@ -382,11 +382,13 @@ httpd_start(httpd_t *httpd, unsigned short *port)
 		MUTEX_UNLOCK(httpd->run_mutex);
 		return -1;
 	}
+#ifdef ENABLE_IPV6
 	httpd->server_fd6 = netutils_init_socket(port, 1, 0);
 	if (httpd->server_fd6 == -1) {
 		logger_log(httpd->logger, LOGGER_WARNING, "Error initialising IPv6 socket %d", SOCKET_GET_ERROR());
 		logger_log(httpd->logger, LOGGER_WARNING, "Continuing without IPv6 support");
 	}
+#endif
 
 	if (httpd->server_fd4 != -1 && listen(httpd->server_fd4, backlog) == -1) {
 		logger_log(httpd->logger, LOGGER_ERR, "Error listening to IPv4 socket");
@@ -395,6 +397,7 @@ httpd_start(httpd_t *httpd, unsigned short *port)
 		MUTEX_UNLOCK(httpd->run_mutex);
 		return -2;
 	}
+#ifdef ENABLE_IPV6
 	if (httpd->server_fd6 != -1 && listen(httpd->server_fd6, backlog) == -1) {
 		logger_log(httpd->logger, LOGGER_ERR, "Error listening to IPv6 socket");
 		closesocket(httpd->server_fd4);
@@ -402,6 +405,7 @@ httpd_start(httpd_t *httpd, unsigned short *port)
 		MUTEX_UNLOCK(httpd->run_mutex);
 		return -2;
 	}
+#endif
 	logger_log(httpd->logger, LOGGER_INFO, "Initialized server socket(s)");
 
 	/* Set values correctly and create new thread */
