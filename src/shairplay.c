@@ -36,7 +36,7 @@
 #include <shairplay/raop.h>
 #include <shairplay/airplay.h>
 
-#include <ao/ao.h>
+#include "audio.h" 
 
 #include "config.h"
 
@@ -52,17 +52,6 @@ typedef struct {
 	char ao_deviceid[16];
 	int  enable_airplay;
 } shairplay_options_t;
-
-typedef struct {
-	ao_device *device;
-
-	int buffering;
-	int buflen;
-	char buffer[8192];
-
-	float volume;
-} shairplay_session_t;
-
 
 static int running;
 
@@ -119,135 +108,6 @@ parse_hwaddr(const char *str, char *hwaddr, int hwaddrlen)
 		hwaddr[i] = (char) strtol(str+(i*3), NULL, 16);
 	}
 	return 0;
-}
-
-static ao_device *
-audio_open_device(shairplay_options_t *opt, int bits, int channels, int samplerate)
-{
-	ao_device *device = NULL;
-	ao_option *ao_options = NULL;
-	ao_sample_format format;
-	int driver_id;
-
-	/* Get the libao driver ID */
-	if (strlen(opt->ao_driver)) {
-		driver_id = ao_driver_id(opt->ao_driver);
-	} else {
-		driver_id = ao_default_driver_id();
-	}
-
-	/* Add all available libao options */
-	if (strlen(opt->ao_devicename)) {
-		ao_append_option(&ao_options, "dev", opt->ao_devicename);
-	}
-	if (strlen(opt->ao_deviceid)) {
-		ao_append_option(&ao_options, "id", opt->ao_deviceid);
-	}
-
-	/* Set audio format */
-	memset(&format, 0, sizeof(format));
-	format.bits = bits;
-	format.channels = channels;
-	format.rate = samplerate;
-	format.byte_format = AO_FMT_NATIVE;
-
-	/* Try opening the actual device */
-	device = ao_open_live(driver_id, &format, ao_options);
-	ao_free_options(ao_options);
-	return device;
-}
-
-static void *
-audio_init(void *cls, int bits, int channels, int samplerate)
-{
-	shairplay_options_t *options = cls;
-	shairplay_session_t *session;
-
-	session = calloc(1, sizeof(shairplay_session_t));
-	assert(session);
-
-	session->device = audio_open_device(options, bits, channels, samplerate);
-	if (session->device == NULL) {
-		printf("Error opening device %d\n", errno);
-	}
-	assert(session->device);
-
-	session->buffering = 1;
-	session->volume = 1.0f;
-	return session;
-}
-
-static int
-audio_output(shairplay_session_t *session, const void *buffer, int buflen)
-{
-	short *shortbuf;
-	char tmpbuf[4096];
-	int tmpbuflen, i;
-
-	tmpbuflen = (buflen > sizeof(tmpbuf)) ? sizeof(tmpbuf) : buflen;
-	memcpy(tmpbuf, buffer, tmpbuflen);
-	if (ao_is_big_endian()) {
-		for (i=0; i<tmpbuflen/2; i++) {
-			char tmpch = tmpbuf[i*2];
-			tmpbuf[i*2] = tmpbuf[i*2+1];
-			tmpbuf[i*2+1] = tmpch;
-		}
-	}
-	shortbuf = (short *)tmpbuf;
-	for (i=0; i<tmpbuflen/2; i++) {
-		shortbuf[i] = shortbuf[i] * session->volume;
-	}
-	ao_play(session->device, tmpbuf, tmpbuflen);
-	return tmpbuflen;
-}
-
-static void
-audio_process(void *cls, void *opaque, const void *buffer, int buflen)
-{
-	shairplay_session_t *session = opaque;
-	int processed;
-
-	if (session->buffering) {
-		printf("Buffering... %d %d\n", session->buflen + buflen, sizeof(session->buffer));
-		if (session->buflen+buflen < sizeof(session->buffer)) {
-			memcpy(session->buffer+session->buflen, buffer, buflen);
-			session->buflen += buflen;
-			return;
-		}
-		session->buffering = 0;
-		printf("Finished buffering...\n");
-
-		processed = 0;
-		while (processed < session->buflen) {
-			processed += audio_output(session,
-			                          session->buffer+processed,
-			                          session->buflen-processed);
-		}
-		session->buflen = 0;
-	}
-
-	processed = 0;
-	while (processed < buflen) {
-		processed += audio_output(session,
-		                          buffer+processed,
-		                          buflen-processed);
-	}
-}
-
-static void
-audio_destroy(void *cls, void *opaque)
-{
-	shairplay_session_t *session = opaque;
-
-	ao_close(session->device);
-	free(session);
-}
-
-static void
-audio_set_volume(void *cls, void *opaque, float volume)
-{
-	shairplay_session_t *session = opaque;
-	session->volume = pow(10.0, 0.05*volume);
 }
 
 static int
@@ -337,24 +197,8 @@ main(int argc, char *argv[])
 		return 0;
 	}
 
-	ao_initialize();
-
-	device = audio_open_device(&options, 16, 2, 44100);
-	if (device == NULL) {
-		fprintf(stderr, "Error opening audio device %d\n", errno);
-		fprintf(stderr, "Please check your libao settings and try again\n");
+	if (audio_prepare(options.ao_driver, options.ao_devicename, options.ao_deviceid, &raop_cbs) < 0) 
 		return -1;
-	} else {
-		ao_close(device);
-		device = NULL;
-	}
-
-	memset(&raop_cbs, 0, sizeof(raop_cbs));
-	raop_cbs.cls = &options;
-	raop_cbs.audio_init = audio_init;
-	raop_cbs.audio_process = audio_process;
-	raop_cbs.audio_destroy = audio_destroy;
-	raop_cbs.audio_set_volume = audio_set_volume;
 
 	raop = raop_init_from_keyfile(10, &raop_cbs, "airport.key", NULL);
 	if (raop == NULL) {
@@ -372,11 +216,13 @@ main(int argc, char *argv[])
 	if (options.enable_airplay) {
 		/* TODO: fix the callbacks */
 		memset(&airplay_cbs, 0, sizeof(airplay_cbs));
+#if 0
 		airplay_cbs.cls = &options;
 		airplay_cbs.audio_init = audio_init;
 		airplay_cbs.audio_process = audio_process;
 		airplay_cbs.audio_destroy = audio_destroy;
 		airplay_cbs.audio_set_volume = audio_set_volume;
+#endif
 
 		airplay = airplay_init_from_keyfile(10, &airplay_cbs, "airport.key", NULL);
 		if (airplay == NULL) {
@@ -421,7 +267,8 @@ main(int argc, char *argv[])
 
 	raop_stop(raop);
 	raop_destroy(raop);
-	ao_shutdown();
+
+	audio_shutdown();
 
 	if (options.enable_airplay) {
 		airplay_stop(airplay);
