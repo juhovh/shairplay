@@ -62,6 +62,7 @@ typedef pthread_cond_t cond_handle_t;
 #define COND_CREATE(handle) pthread_cond_init(&(handle), NULL)
 #define COND_WAIT(handle, mutex) pthread_cond_wait(&(handle), &(mutex))
 #define COND_SIGNAL(handle) pthread_cond_signal(&(handle))
+#define COND_DESTROY(handle) pthread_cond_destroy(&(handle))
 
 #endif
 

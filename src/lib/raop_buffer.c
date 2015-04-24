@@ -272,16 +272,26 @@ raop_buffer_init(const char *rtpmap,
 }
 
 void
+raop_buffer_stop(raop_buffer_t *raop_buffer)
+{
+	/* make dequeue exit */
+	raop_buffer->is_empty = 0;
+	raop_buffer->first_seqnum = 0;
+	raop_buffer->last_seqnum = 2;
+	COND_SIGNAL(raop_buffer->cond);
+	MUTEX_UNLOCK(raop_buffer->mutex);
+}
+
+void
 raop_buffer_destroy(raop_buffer_t *raop_buffer)
 {
 	if (raop_buffer) {
-		COND_SIGNAL(raop_buffer->mutex);
-		MUTEX_UNLOCK(raop_buffer->mutex);
 		if (raop_buffer->cn == 1)
 		  destroy_alac(raop_buffer->alac);
                 else
 		  destroy_aac_eld(raop_buffer->aac_eld);
 		MUTEX_DESTROY(raop_buffer->mutex);
+		COND_DESTROY(raop_buffer->cond);
 		free(raop_buffer->buffer);
 		free(raop_buffer);
 	}
@@ -338,7 +348,8 @@ raop_buffer_queue(raop_buffer_t *raop_buffer, unsigned char *data, unsigned shor
 	/* Check that there is always space in the buffer, otherwise flush */
 	if (seqnum_cmp(seqnum, raop_buffer->first_seqnum+RAOP_BUFFER_LENGTH) >= 0) {
 		MUTEX_UNLOCK(raop_buffer->mutex);
-		fprintf(stderr, "buffer overrun!\n");
+		fprintf(stderr, "buffer overrun seqnum=%d,first=%d!\n",
+		  	seqnum,raop_buffer->first_seqnum);
 		raop_buffer_flush(raop_buffer, seqnum);
 		MUTEX_LOCK(raop_buffer->mutex);
 	}

@@ -691,8 +691,8 @@ raop_rtp_stop(raop_rtp_t *raop_rtp)
 	raop_rtp->running = 0;
 	MUTEX_UNLOCK(raop_rtp->run_mutex);
 
-	THREAD_CANCEL(raop_rtp->thread_rtp);
-	THREAD_CANCEL(raop_rtp->thread_audio);
+	raop_buffer_stop(raop_rtp->buffer);
+
 	/* Join the thread */
 	THREAD_JOIN(raop_rtp->thread_rtp);
 	THREAD_JOIN(raop_rtp->thread_audio);
@@ -701,7 +701,8 @@ raop_rtp_stop(raop_rtp_t *raop_rtp)
 	if (raop_rtp->dsock != -1) closesocket(raop_rtp->dsock);
 
 	/* Flush buffer into initial state */
-	raop_buffer_flush(raop_rtp->buffer, -1);
+	/* with mutex this might deadlock */
+	//raop_buffer_flush(raop_rtp->buffer, -1);
 
 	/* Mark thread as joined */
 	MUTEX_LOCK(raop_rtp->run_mutex);

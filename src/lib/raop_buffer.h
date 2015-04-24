@@ -46,5 +46,6 @@ void raop_buffer_handle_resends(raop_buffer_t *raop_buffer, raop_resend_cb_t res
 void raop_buffer_flush(raop_buffer_t *raop_buffer, int next_seq);
 
 void raop_buffer_destroy(raop_buffer_t *raop_buffer);
+void raop_buffer_stop(raop_buffer_t *raop_buffer);
 
 #endif

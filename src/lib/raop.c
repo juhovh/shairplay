@@ -425,7 +425,6 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 		http_response_add_header(res, "Connection", "close");
 		if (conn->raop_rtp) {
 			/* Destroy our RTP session */
-			raop_rtp_stop(conn->raop_rtp);
 			raop_rtp_destroy(conn->raop_rtp);
 			conn->raop_rtp = NULL;
 		}
