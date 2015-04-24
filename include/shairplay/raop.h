@@ -11,6 +11,18 @@
 extern "C" {
 #endif
 
+/* Define version information */
+#define RAOP_VERSION_MAJOR 0
+#define RAOP_VERSION_MINOR 2
+#define RAOP_VERSION_MICRO 0
+
+#define RAOP_VERSION_MAKE(major, minor, micro) ( ((major) << 16) \
+                                               | ((minor) <<  8) \
+                                               | ((micro) <<  0) )
+
+#define RAOP_VERSION_INT RAOP_VERSION_MAKE( RAOP_VERSION_MAJOR \
+                                          , RAOP_VERSION_MINOR \
+                                          , RAOP_VERSION_MICRO )
 
 /* Define syslog style log levels */
 #define RAOP_LOG_EMERG       0       /* system is unusable */
@@ -32,7 +44,7 @@ struct raop_callbacks_s {
 
 	/* Compulsory callback functions */
 	void* (*audio_init)(void *cls, int bits, int channels, int samplerate);
-	void  (*audio_process)(void *cls, void *session, const void *buffer, int buflen);
+	void  (*audio_process)(void *cls, void *session, const void *buffer, int buflen, unsigned timestamp);
 	void  (*audio_destroy)(void *cls, void *session);
 
 	/* Optional but recommended callback functions */
@@ -40,6 +52,9 @@ struct raop_callbacks_s {
 	void  (*audio_set_volume)(void *cls, void *session, float volume);
 	void  (*audio_set_metadata)(void *cls, void *session, const void *buffer, int buflen);
 	void  (*audio_set_coverart)(void *cls, void *session, const void *buffer, int buflen);
+
+	void  (*audio_get_clock)(void *cls, unsigned long long* clock);
+	void  (*audio_sync)(void *cls, void *session, unsigned long long clock, unsigned long long dispersion, unsigned timestamp, unsigned latency);
 };
 typedef struct raop_callbacks_s raop_callbacks_t;
 
