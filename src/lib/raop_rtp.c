@@ -691,6 +691,8 @@ raop_rtp_stop(raop_rtp_t *raop_rtp)
 	raop_rtp->running = 0;
 	MUTEX_UNLOCK(raop_rtp->run_mutex);
 
+	THREAD_CANCEL(raop_rtp->thread_rtp);
+	THREAD_CANCEL(raop_rtp->thread_audio);
 	/* Join the thread */
 	THREAD_JOIN(raop_rtp->thread_rtp);
 	THREAD_JOIN(raop_rtp->thread_audio);

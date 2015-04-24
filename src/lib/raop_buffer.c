@@ -82,8 +82,9 @@ struct raop_buffer_s {
         /* audio codecs*/
         int cn;
 
-	/* mutex to serialize buffer accesses */
+	/* mutex&conditional variable to serialize buffer accesses */
 	mutex_handle_t mutex;
+	cond_handle_t cond;
 };
 
 
@@ -265,6 +266,7 @@ raop_buffer_init(const char *rtpmap,
 	raop_buffer->cn = cn;
 
 	MUTEX_CREATE(raop_buffer->mutex);
+	COND_CREATE(raop_buffer->cond);
 
 	return raop_buffer;
 }
@@ -273,6 +275,7 @@ void
 raop_buffer_destroy(raop_buffer_t *raop_buffer)
 {
 	if (raop_buffer) {
+		COND_SIGNAL(raop_buffer->mutex);
 		MUTEX_UNLOCK(raop_buffer->mutex);
 		if (raop_buffer->cn == 1)
 		  destroy_alac(raop_buffer->alac);
@@ -373,6 +376,7 @@ raop_buffer_queue(raop_buffer_t *raop_buffer, unsigned char *data, unsigned shor
         else if (raop_buffer->cn == 3)
 		aac_eld_decode_frame(raop_buffer->aac_eld, packetbuf, datalen - 12, entry->audio_buffer, &outputlen);
 	else {
+		COND_SIGNAL(raop_buffer->cond);
 		MUTEX_UNLOCK(raop_buffer->mutex);
 		return -3;
 	}
@@ -388,6 +392,8 @@ raop_buffer_queue(raop_buffer_t *raop_buffer, unsigned char *data, unsigned shor
 	if (seqnum_cmp(seqnum, raop_buffer->last_seqnum) > 0) {
 		raop_buffer->last_seqnum = seqnum;
 	}
+
+	COND_SIGNAL(raop_buffer->cond);
 	MUTEX_UNLOCK(raop_buffer->mutex);
 	return 1;
 }
@@ -403,9 +409,9 @@ raop_buffer_dequeue(raop_buffer_t *raop_buffer, int *length, int no_resend)
 	buflen = seqnum_cmp(raop_buffer->last_seqnum, raop_buffer->first_seqnum)+1;
 
 	/* Cannot dequeue from empty buffer */
-	if (raop_buffer->is_empty || buflen <= 0) {
-		MUTEX_UNLOCK(raop_buffer->mutex);
-		return NULL;
+	while (raop_buffer->is_empty || buflen <= 0)  {
+		COND_WAIT(raop_buffer->cond, raop_buffer->mutex);
+		buflen = seqnum_cmp(raop_buffer->last_seqnum, raop_buffer->first_seqnum)+1;
 	}
 
 	/* Get the first buffer entry for inspection */
@@ -491,5 +497,6 @@ raop_buffer_flush(raop_buffer_t *raop_buffer, int next_seq)
 		raop_buffer->first_seqnum = next_seq;
 		raop_buffer->last_seqnum = next_seq-1;
 	}
+	COND_SIGNAL(raop_buffer->cond);
 	MUTEX_UNLOCK(raop_buffer->mutex);
 }
