@@ -450,11 +450,11 @@ raop_rtp_thread_udp(void *arg)
 
 	config = raop_buffer_get_config(raop_rtp->buffer);
 	cb_data = raop_rtp->callbacks.audio_init(raop_rtp->callbacks.cls,
-	                               config->bitDepth,
-	                               config->numChannels,
-	                               config->sampleRate);
+	                                         config->bitDepth,
+	                                         config->numChannels,
+	                                         config->sampleRate);
 
-	while(1) {
+	while (1) {
 		fd_set rfds;
 		struct timeval tv;
 		int nfds, ret;
@@ -610,9 +610,9 @@ raop_rtp_thread_tcp(void *arg)
 
 	config = raop_buffer_get_config(raop_rtp->buffer);
 	cb_data = raop_rtp->callbacks.audio_init(raop_rtp->callbacks.cls,
-	                               config->bitDepth,
-	                               config->numChannels,
-	                               config->sampleRate);
+	                                         config->bitDepth,
+	                                         config->numChannels,
+	                                         config->sampleRate);
 
 	while (1) {
 		fd_set rfds;
