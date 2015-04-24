@@ -28,9 +28,15 @@
 
 #define RAOP_BUFFER_LENGTH 32
 
+typedef enum {
+	RAOP_STATE_UNAVAILABLE,
+	RAOP_STATE_RESEND_REQUESTED,
+	RAOP_STATE_AVAILABLE
+} raop_state_t;
+
 typedef struct {
-	/* Packet available */
-	int available;
+	/* Packet state */
+	raop_state_t state;
 
 	/* RTP header */
 	unsigned char flags;
@@ -259,8 +265,8 @@ raop_buffer_queue(raop_buffer_t *raop_buffer, unsigned char *data, unsigned shor
 
 	/* Get entry corresponding our seqnum */
 	entry = &raop_buffer->entries[seqnum % RAOP_BUFFER_LENGTH];
-	if (entry->available && seqnum_cmp(entry->seqnum, seqnum) == 0) {
-		/* Packet resend, we can safely ignore */
+	if (entry->state == RAOP_STATE_AVAILABLE && seqnum_cmp(entry->seqnum, seqnum) == 0) {
+		/* Packet sent twice, we can safely ignore it */
 		return 0;
 	}
 
@@ -270,7 +276,7 @@ raop_buffer_queue(raop_buffer_t *raop_buffer, unsigned char *data, unsigned shor
 	entry->seqnum = seqnum;
 	entry->timestamp = bio_get_be_u32(&data[4]);
 	entry->ssrc = bio_get_be_u32(&data[8]);
-	entry->available = 1;
+	entry->state = RAOP_STATE_AVAILABLE;
 
 	/* Decrypt audio data */
 	encryptedlen = (datalen-12)/16*16;
@@ -315,7 +321,7 @@ raop_buffer_dequeue(raop_buffer_t *raop_buffer, int *length, unsigned int *times
 	entry = &raop_buffer->entries[raop_buffer->first_seqnum % RAOP_BUFFER_LENGTH];
 	if (no_resend) {
 		/* If we do no resends, always return the first entry */
-	} else if (!entry->available) {
+	} else if (entry->state != RAOP_STATE_AVAILABLE) {
 		/* Check how much we have space left in the buffer */
 		if (buflen < RAOP_BUFFER_LENGTH) {
 			/* Return nothing and hope resend gets on time */
@@ -326,14 +332,14 @@ raop_buffer_dequeue(raop_buffer_t *raop_buffer, int *length, unsigned int *times
 
 	/* Update buffer and validate entry */
 	raop_buffer->first_seqnum += 1;
-	if (!entry->available) {
+	if (entry->state != RAOP_STATE_AVAILABLE) {
 		/* Return an empty audio buffer to skip audio */
 		*length = entry->audio_buffer_size;
 		*timestamp = entry->timestamp;
 		memset(entry->audio_buffer, 0, *length);
 		return entry->audio_buffer;
 	}
-	entry->available = 0;
+	entry->state = RAOP_STATE_UNAVAILABLE;
 
 	/* Return entry audio buffer */
 	*length = entry->audio_buffer_len;
@@ -355,9 +361,10 @@ raop_buffer_handle_resends(raop_buffer_t *raop_buffer, raop_resend_cb_t resend_c
 
 		for (seqnum=raop_buffer->first_seqnum; seqnum_cmp(seqnum, raop_buffer->last_seqnum)<0; seqnum++) {
 			entry = &raop_buffer->entries[seqnum % RAOP_BUFFER_LENGTH];
-			if (entry->available) {
+			if (entry->state != RAOP_STATE_UNAVAILABLE) {
 				break;
 			}
+			entry->state = RAOP_STATE_RESEND_REQUESTED;
 		}
 		if (seqnum_cmp(seqnum, raop_buffer->first_seqnum) == 0) {
 			return;
@@ -375,7 +382,7 @@ raop_buffer_flush(raop_buffer_t *raop_buffer, int next_seq)
 	assert(raop_buffer);
 
 	for (i=0; i<RAOP_BUFFER_LENGTH; i++) {
-		raop_buffer->entries[i].available = 0;
+		raop_buffer->entries[i].state = RAOP_STATE_UNAVAILABLE;
 		raop_buffer->entries[i].audio_buffer_len = 0;
 	}
 	if (next_seq < 0 || next_seq > 0xffff) {
