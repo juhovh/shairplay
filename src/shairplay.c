@@ -199,7 +199,7 @@ audio_output(shairplay_session_t *session, const void *buffer, int buflen)
 }
 
 static void
-audio_process(void *cls, void *opaque, const void *buffer, int buflen)
+audio_process(void *cls, void *opaque, const void *buffer, int buflen, unsigned int timestamp)
 {
 	shairplay_session_t *session = opaque;
 	int processed;
