@@ -25,14 +25,22 @@ typedef HANDLE thread_handle_t;
 #define THREAD_RETVAL DWORD WINAPI
 #define THREAD_CREATE(handle, func, arg) \
 	handle = CreateThread(NULL, 0, func, arg, 0, NULL)
-#define THREAD_JOIN(handle) do { WaitForSingleObject(handle, INFINITE); CloseHandle(handle); } while(0)
+#define THREAD_JOIN(handle) do { WaitForSingleObject((handle), INFINITE); CloseHandle(handle); } while(0)
 
-typedef HANDLE mutex_handle_t;
+typedef SRWLOCK mutex_handle_t;
 
-#define MUTEX_CREATE(handle) handle = CreateMutex(NULL, FALSE, NULL)
-#define MUTEX_LOCK(handle) WaitForSingleObject(handle, INFINITE)
-#define MUTEX_UNLOCK(handle) ReleaseMutex(handle)
-#define MUTEX_DESTROY(handle) CloseHandle(handle)
+#define MUTEX_CREATE(handle) InitializeSRWLock(&(handle))
+#define MUTEX_LOCK(handle) AcquireSRWLockExclusive(&(handle))
+#define MUTEX_UNLOCK(handle) ReleaseSRWLockExclusive(&(handle))
+#define MUTEX_DESTROY(handle) do {} while(0)
+
+typedef CONDITION_VARIABLE cond_handle_t;
+
+#define COND_CREATE(handle) InitializeConditionVariable(&(handle))
+#define COND_WAIT(handle, mutex) SleepConditionVariableSRW(&(handle), &(mutex), INFINITE, 0)
+#define COND_SIGNAL(handle) WakeConditionVariable(&(handle))
+#define COND_BROADCAST(handle) WakeAllConditionVariable(&(handle))
+#define COND_DESTROY(handle) do {} while(0)
 
 #else /* Use pthread library */
 
@@ -54,6 +62,14 @@ typedef pthread_mutex_t mutex_handle_t;
 #define MUTEX_LOCK(handle) pthread_mutex_lock(&(handle))
 #define MUTEX_UNLOCK(handle) pthread_mutex_unlock(&(handle))
 #define MUTEX_DESTROY(handle) pthread_mutex_destroy(&(handle))
+
+typedef pthread_cond_t cond_handle_t;
+
+#define COND_CREATE(handle) pthread_cond_init(&(handle), NULL)
+#define COND_WAIT(handle, mutex) pthread_cond_wait(&(handle), &(mutex))
+#define COND_SIGNAL(handle) pthread_cond_signal(&(handle))
+#define COND_BROADCAST(handle) pthread_cond_broadcast(&(handle))
+#define COND_DESTROY(handle) pthread_cond_destroy(&(handle))
 
 #endif
 
