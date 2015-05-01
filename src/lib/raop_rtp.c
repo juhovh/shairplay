@@ -32,6 +32,7 @@
 
 struct raop_rtp_s {
 	logger_t *logger;
+	raop_decoder_t *decoder;
 	raop_callbacks_t callbacks;
 
 	/* Buffer to handle all resends */
@@ -150,25 +151,25 @@ raop_rtp_get_clock_internal(raop_rtp_t *raop_rtp, unsigned long long* clock)
 }
 
 raop_rtp_t *
-raop_rtp_init(logger_t *logger, raop_callbacks_t *callbacks, const char *remote,
-              const char *rtpmap, const char *fmtp,
-              const unsigned char *aeskey, const unsigned char *aesiv)
+raop_rtp_init(logger_t *logger, raop_decoder_t *decoder,
+              raop_callbacks_t *callbacks, const char *remote)
 {
 	raop_rtp_t *raop_rtp;
 
 	assert(logger);
+	assert(decoder);
 	assert(callbacks);
 	assert(remote);
-	assert(rtpmap);
-	assert(fmtp);
 
 	raop_rtp = calloc(1, sizeof(raop_rtp_t));
 	if (!raop_rtp) {
 		return NULL;
 	}
 	raop_rtp->logger = logger;
+	raop_rtp->decoder = decoder;
 	memcpy(&raop_rtp->callbacks, callbacks, sizeof(raop_callbacks_t));
-	raop_rtp->buffer = raop_buffer_init(rtpmap, fmtp, aeskey, aesiv);
+
+	raop_rtp->buffer = raop_buffer_init(raop_rtp->decoder);
 	if (!raop_rtp->buffer) {
 		free(raop_rtp);
 		return NULL;
@@ -179,6 +180,7 @@ raop_rtp_init(logger_t *logger, raop_callbacks_t *callbacks, const char *remote,
 	raop_rtp->ntp_dispersion = RAOP_NTP_MAXDISP;
 
 	if (raop_rtp_parse_remote(raop_rtp, remote) < 0) {
+		raop_buffer_destroy(raop_rtp->buffer);
 		free(raop_rtp);
 		return NULL;
 	}
@@ -438,21 +440,23 @@ static THREAD_RETVAL
 raop_rtp_thread_udp(void *arg)
 {
 	raop_rtp_t *raop_rtp = arg;
+	unsigned int sample_rate;
+	unsigned char bit_depth;
+	unsigned char channels;
 	unsigned char packet[RAOP_PACKET_LEN];
 	unsigned int packetlen;
 	struct sockaddr_storage saddr;
 	socklen_t saddrlen;
 
-	const ALACSpecificConfig *config;
 	void *cb_data = NULL;
 
 	assert(raop_rtp);
 
-	config = raop_buffer_get_config(raop_rtp->buffer);
+	sample_rate = raop_decoder_get_sample_rate(raop_rtp->decoder);
+	bit_depth = raop_decoder_get_bit_depth(raop_rtp->decoder);
+	channels = raop_decoder_get_channels(raop_rtp->decoder);
 	cb_data = raop_rtp->callbacks.audio_init(raop_rtp->callbacks.cls,
-	                                         config->bitDepth,
-	                                         config->numChannels,
-	                                         config->sampleRate);
+	                                         bit_depth, channels, sample_rate);
 
 	while (1) {
 		fd_set rfds;
@@ -600,19 +604,21 @@ raop_rtp_thread_tcp(void *arg)
 {
 	raop_rtp_t *raop_rtp = arg;
 	int stream_fd = -1;
+	unsigned int sample_rate;
+	unsigned char bit_depth;
+	unsigned char channels;
 	unsigned char packet[RAOP_PACKET_LEN];
 	unsigned int packetlen = 0;
 
-	const ALACSpecificConfig *config;
 	void *cb_data = NULL;
 
 	assert(raop_rtp);
 
-	config = raop_buffer_get_config(raop_rtp->buffer);
+	sample_rate = raop_decoder_get_sample_rate(raop_rtp->decoder);
+	bit_depth = raop_decoder_get_bit_depth(raop_rtp->decoder);
+	channels = raop_decoder_get_channels(raop_rtp->decoder);
 	cb_data = raop_rtp->callbacks.audio_init(raop_rtp->callbacks.cls,
-	                                         config->bitDepth,
-	                                         config->numChannels,
-	                                         config->sampleRate);
+	                                         bit_depth, channels, sample_rate);
 
 	while (1) {
 		fd_set rfds;

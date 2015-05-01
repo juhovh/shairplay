@@ -60,6 +60,7 @@ struct raop_s {
 
 struct raop_conn_s {
 	raop_t *raop;
+	raop_decoder_t *raop_decoder;
 	raop_rtp_t *raop_rtp;
 
 	unsigned char *local;
@@ -229,14 +230,25 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 			logger_log(conn->raop->logger, LOGGER_DEBUG, "aeskeylen: %d", aeskeylen);
 			logger_log(conn->raop->logger, LOGGER_DEBUG, "aesivlen: %d", aesivlen);
 
-			if (conn->raop_rtp) {
-				/* This should never happen */
-				raop_rtp_destroy(conn->raop_rtp);
-				conn->raop_rtp = NULL;
+			/* This is for safety, should already be NULL */
+			raop_rtp_destroy(conn->raop_rtp);
+			raop_decoder_destroy(conn->raop_decoder);
+			conn->raop_rtp = NULL;
+			conn->raop_decoder = NULL;
+
+			conn->raop_decoder = raop_decoder_init(raop->logger, rtpmapstr, fmtpstr,
+			                                       aeskey, aesiv);
+			if (!conn->raop_decoder) {
+				logger_log(raop->logger, LOGGER_ERR, "Error allocating the decoder");
+				http_response_set_disconnect(res, 1);
 			}
-			conn->raop_rtp = raop_rtp_init(raop->logger, &raop->callbacks, remotestr, rtpmapstr, fmtpstr, aeskey, aesiv);
+
+			if (conn->raop_decoder) {
+				conn->raop_rtp = raop_rtp_init(raop->logger, conn->raop_decoder,
+				                               &raop->callbacks, remotestr);
+			}
 			if (!conn->raop_rtp) {
-				logger_log(conn->raop->logger, LOGGER_ERR, "Error initializing the audio decoder");
+				logger_log(raop->logger, LOGGER_ERR, "Error initializing the RTP handler");
 				http_response_set_disconnect(res, 1);
 			}
 			sdp_destroy(sdp);
@@ -367,12 +379,12 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 		}
 	} else if (!strcmp(method, "TEARDOWN")) {
 		http_response_add_header(res, "Connection", "close");
-		if (conn->raop_rtp) {
-			/* Destroy our RTP session */
-			raop_rtp_stop(conn->raop_rtp);
-			raop_rtp_destroy(conn->raop_rtp);
-			conn->raop_rtp = NULL;
-		}
+
+		/* Destroy our RTP session */
+		raop_rtp_destroy(conn->raop_rtp);
+		raop_decoder_destroy(conn->raop_decoder);
+		conn->raop_rtp = NULL;
+		conn->raop_decoder = NULL;
 	}
 	http_response_finish(res, NULL, 0);
 
@@ -385,10 +397,10 @@ conn_destroy(void *ptr)
 {
 	raop_conn_t *conn = ptr;
 
-	if (conn->raop_rtp) {
-		/* This is done in case TEARDOWN was not called */
-		raop_rtp_destroy(conn->raop_rtp);
-	}
+	/* This is done in case TEARDOWN was not called */
+	raop_rtp_destroy(conn->raop_rtp);
+	raop_decoder_destroy(conn->raop_decoder);
+
 	free(conn->local);
 	free(conn->remote);
 	free(conn);

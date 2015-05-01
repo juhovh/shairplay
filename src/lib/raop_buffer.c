@@ -22,10 +22,6 @@
 #include "utils.h"
 #include "bio.h"
 
-#include <stdint.h>
-#include "crypto/crypto.h"
-#include "alac/alac.h"
-
 #define RAOP_BUFFER_LENGTH 32
 
 typedef enum {
@@ -52,13 +48,8 @@ typedef struct {
 } raop_buffer_entry_t;
 
 struct raop_buffer_s {
-	/* AES key and IV */
-	unsigned char aeskey[RAOP_AESKEY_LEN];
-	unsigned char aesiv[RAOP_AESIV_LEN];
-
-	/* ALAC decoder */
-	ALACSpecificConfig alacConfig;
-	alac_file *alac;
+	/* Audio decoder */
+	raop_decoder_t *decoder;
 
 	/* First and last seqnum */
 	int is_empty;
@@ -73,105 +64,24 @@ struct raop_buffer_s {
 	void *buffer;
 };
 
-
-
-static int
-get_fmtp_info(ALACSpecificConfig *config, const char *fmtp)
-{
-	int intarr[12];
-	char *original;
-	char *strptr;
-	int i;
-
-	/* Parse fmtp string to integers */
-	original = strptr = strdup(fmtp);
-	for (i=0; i<12; i++) {
-		if (strptr == NULL) {
-			free(original);
-			return -1;
-		}
-		intarr[i] = atoi(utils_strsep(&strptr, " "));
-	}
-	free(original);
-	original = strptr = NULL;
-
-	/* Fill the config struct */
-	config->frameLength = intarr[1];
-	config->compatibleVersion = intarr[2];
-	config->bitDepth = intarr[3];
-	config->pb = intarr[4];
-	config->mb = intarr[5];
-	config->kb = intarr[6];
-	config->numChannels = intarr[7];
-	config->maxRun = intarr[8];
-	config->maxFrameBytes = intarr[9];
-	config->avgBitRate = intarr[10];
-	config->sampleRate = intarr[11];
-
-	/* Validate supported audio types */
-	if (config->bitDepth != 16) {
-		return -2;
-	}
-	if (config->numChannels != 2) {
-		return -3;
-	}
-
-	return 0;
-}
-
-static void
-set_decoder_info(alac_file *alac, ALACSpecificConfig *config)
-{
-	unsigned char decoder_info[48];
-	memset(decoder_info, 0, sizeof(decoder_info));
-
-	/* Construct decoder info buffer */
-	bio_set_be_u32(&decoder_info[24], config->frameLength);
-	decoder_info[28] = config->compatibleVersion;
-	decoder_info[29] = config->bitDepth;
-	decoder_info[30] = config->pb;
-	decoder_info[31] = config->mb;
-	decoder_info[32] = config->kb;
-	decoder_info[33] = config->numChannels;
-	bio_set_be_u16(&decoder_info[34], config->maxRun);
-	bio_set_be_u32(&decoder_info[36], config->maxFrameBytes);
-	bio_set_be_u32(&decoder_info[40], config->avgBitRate);
-	bio_set_be_u32(&decoder_info[44], config->sampleRate);
-	alac_set_info(alac, (char *) decoder_info);
-}
-
 raop_buffer_t *
-raop_buffer_init(const char *rtpmap,
-                 const char *fmtp,
-                 const unsigned char *aeskey,
-                 const unsigned char *aesiv)
+raop_buffer_init(raop_decoder_t *raop_decoder)
 {
 	raop_buffer_t *raop_buffer;
 	int audio_buffer_size;
-	ALACSpecificConfig *alacConfig;
 	int i;
 
-        assert(rtpmap);
-	assert(fmtp);
-	assert(aeskey);
-	assert(aesiv);
+	assert(raop_decoder);
 
 	raop_buffer = calloc(1, sizeof(raop_buffer_t));
 	if (!raop_buffer) {
 		return NULL;
 	}
 
-	/* Parse fmtp information */
-	alacConfig = &raop_buffer->alacConfig;
-	if (get_fmtp_info(alacConfig, fmtp) < 0) {
-		free(raop_buffer);
-		return NULL;
-	}
-
 	/* Allocate the output audio buffers */
-	audio_buffer_size = alacConfig->frameLength *
-	                    alacConfig->numChannels *
-	                    alacConfig->bitDepth/8;
+	audio_buffer_size = raop_decoder_get_channels(raop_decoder) *
+	                    raop_decoder_get_frame_length(raop_decoder) *
+	                    raop_decoder_get_bit_depth(raop_decoder) / 8;
 	raop_buffer->buffer_size = audio_buffer_size *
 	                           RAOP_BUFFER_LENGTH;
 	raop_buffer->buffer = malloc(raop_buffer->buffer_size);
@@ -186,19 +96,8 @@ raop_buffer_init(const char *rtpmap,
 		entry->audio_buffer = (char *)raop_buffer->buffer+i*audio_buffer_size;
 	}
 
-	/* Initialize ALAC decoder */
-	raop_buffer->alac = alac_create(alacConfig->bitDepth,
-	                                alacConfig->numChannels);
-	if (!raop_buffer->alac) {
-		free(raop_buffer->buffer);
-		free(raop_buffer);
-		return NULL;
-	}
-	set_decoder_info(raop_buffer->alac, alacConfig);
-
-	/* Initialize AES keys */
-	memcpy(raop_buffer->aeskey, aeskey, RAOP_AESKEY_LEN);
-	memcpy(raop_buffer->aesiv, aesiv, RAOP_AESIV_LEN);
+	/* Save audio decoder pointer */
+	raop_buffer->decoder = raop_decoder;
 
 	/* Mark buffer as empty */
 	raop_buffer->is_empty = 1;
@@ -209,18 +108,9 @@ void
 raop_buffer_destroy(raop_buffer_t *raop_buffer)
 {
 	if (raop_buffer) {
-		alac_free(raop_buffer->alac);
 		free(raop_buffer->buffer);
 		free(raop_buffer);
 	}
-}
-
-const ALACSpecificConfig *
-raop_buffer_get_config(raop_buffer_t *raop_buffer)
-{
-	assert(raop_buffer);
-
-	return &raop_buffer->alacConfig;
 }
 
 static short
@@ -235,8 +125,6 @@ raop_buffer_queue(raop_buffer_t *raop_buffer, unsigned char *data, unsigned shor
 	unsigned char packetbuf[RAOP_PACKET_LEN];
 	unsigned short seqnum;
 	raop_buffer_entry_t *entry;
-	int encryptedlen;
-	AES_CTX aes_ctx;
 	int outputlen;
 
 	assert(raop_buffer);
@@ -278,18 +166,10 @@ raop_buffer_queue(raop_buffer_t *raop_buffer, unsigned char *data, unsigned shor
 	entry->ssrc = bio_get_be_u32(&data[8]);
 	entry->state = RAOP_STATE_AVAILABLE;
 
-	/* Decrypt audio data */
-	encryptedlen = (datalen-12)/16*16;
-	AES_set_key(&aes_ctx, raop_buffer->aeskey, raop_buffer->aesiv, AES_MODE_128);
-	AES_convert_key(&aes_ctx);
-	AES_cbc_decrypt(&aes_ctx, &data[12], packetbuf, encryptedlen);
-	memcpy(packetbuf+encryptedlen, &data[12+encryptedlen], datalen-12-encryptedlen);
-
-	/* Decode ALAC audio data */
-	outputlen = entry->audio_buffer_size;
-	alac_decode_frame(raop_buffer->alac, packetbuf,
-	                  entry->audio_buffer, &outputlen);
-	entry->audio_buffer_len = outputlen;
+	/* Decrypt and decode audio data */
+	entry->audio_buffer_len = entry->audio_buffer_size;
+	raop_decoder_decode(raop_buffer->decoder, &data[12], datalen - 12,
+	                    entry->audio_buffer, &entry->audio_buffer_len);
 
 	/* Update the raop_buffer seqnums */
 	if (raop_buffer->is_empty) {
