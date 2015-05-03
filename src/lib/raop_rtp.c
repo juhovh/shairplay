@@ -169,7 +169,7 @@ raop_rtp_init(logger_t *logger, raop_decoder_t *decoder,
 	raop_rtp->decoder = decoder;
 	memcpy(&raop_rtp->callbacks, callbacks, sizeof(raop_callbacks_t));
 
-	raop_rtp->buffer = raop_buffer_init(raop_rtp->decoder);
+	raop_rtp->buffer = raop_buffer_init(raop_rtp->logger, raop_rtp->decoder);
 	if (!raop_rtp->buffer) {
 		free(raop_rtp);
 		return NULL;
@@ -266,7 +266,7 @@ raop_rtp_resend_callback(void *opaque, unsigned short seqnum, unsigned short cou
 	addr = (struct sockaddr *)&raop_rtp->control_saddr;
 	addrlen = raop_rtp->control_saddr_len;
 
-	logger_log(raop_rtp->logger, LOGGER_DEBUG, "Got resend request %d %d", seqnum, count);
+	logger_log(raop_rtp->logger, LOGGER_DEBUG, "Sending resend request %d %d", seqnum, count);
 	ourseqnum = raop_rtp->control_seqnum++;
 
 	/* Fill the request buffer */

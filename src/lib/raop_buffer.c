@@ -23,16 +23,18 @@
 #include "bio.h"
 
 #define RAOP_BUFFER_LENGTH 32
+#define RAOP_BUFFER_MAX_RESENDS 3
 
 typedef enum {
 	RAOP_STATE_UNAVAILABLE,
-	RAOP_STATE_RESEND_REQUESTED,
+	RAOP_STATE_WAITING_RESEND,
 	RAOP_STATE_AVAILABLE
 } raop_state_t;
 
 typedef struct {
 	/* Packet state */
 	raop_state_t state;
+	int resend_count;
 
 	/* RTP header */
 	unsigned char flags;
@@ -48,7 +50,7 @@ typedef struct {
 } raop_buffer_entry_t;
 
 struct raop_buffer_s {
-	/* Audio decoder */
+	logger_t *logger;
 	raop_decoder_t *decoder;
 
 	/* First and last seqnum */
@@ -65,7 +67,7 @@ struct raop_buffer_s {
 };
 
 raop_buffer_t *
-raop_buffer_init(raop_decoder_t *raop_decoder)
+raop_buffer_init(logger_t *logger, raop_decoder_t *raop_decoder)
 {
 	raop_buffer_t *raop_buffer;
 	int audio_buffer_size;
@@ -77,6 +79,9 @@ raop_buffer_init(raop_decoder_t *raop_decoder)
 	if (!raop_buffer) {
 		return NULL;
 	}
+
+	raop_buffer->logger = logger;
+	raop_buffer->decoder = raop_decoder;
 
 	/* Allocate the output audio buffers */
 	audio_buffer_size = raop_decoder_get_channels(raop_decoder) *
@@ -95,9 +100,6 @@ raop_buffer_init(raop_decoder_t *raop_decoder)
 		entry->audio_buffer_len = 0;
 		entry->audio_buffer = (char *)raop_buffer->buffer+i*audio_buffer_size;
 	}
-
-	/* Save audio decoder pointer */
-	raop_buffer->decoder = raop_decoder;
 
 	/* Mark buffer as empty */
 	raop_buffer->is_empty = 1;
@@ -165,6 +167,7 @@ raop_buffer_queue(raop_buffer_t *raop_buffer, unsigned char *data, unsigned shor
 	entry->timestamp = bio_get_be_u32(&data[4]);
 	entry->ssrc = bio_get_be_u32(&data[8]);
 	entry->state = RAOP_STATE_AVAILABLE;
+	entry->resend_count = 0;
 
 	/* Decrypt and decode audio data */
 	entry->audio_buffer_len = entry->audio_buffer_size;
@@ -186,8 +189,8 @@ raop_buffer_queue(raop_buffer_t *raop_buffer, unsigned char *data, unsigned shor
 const void *
 raop_buffer_dequeue(raop_buffer_t *raop_buffer, int *length, unsigned int *timestamp, int no_resend)
 {
-	short buflen;
 	raop_buffer_entry_t *entry;
+	short buflen;
 
 	/* Calculate number of entries in the current buffer */
 	buflen = seqnum_cmp(raop_buffer->last_seqnum, raop_buffer->first_seqnum)+1;
@@ -214,6 +217,10 @@ raop_buffer_dequeue(raop_buffer_t *raop_buffer, int *length, unsigned int *times
 	raop_buffer->first_seqnum += 1;
 	if (entry->state != RAOP_STATE_AVAILABLE) {
 		/* Return an empty audio buffer to skip audio */
+		logger_log(raop_buffer->logger, LOGGER_WARNING,
+		           "Receive buffer overrun for seqnum %hu buflen %hd,"
+		           " returning empty audio", raop_buffer->first_seqnum-1,
+		           buflen);
 		*length = entry->audio_buffer_size;
 		*timestamp = entry->timestamp;
 		memset(entry->audio_buffer, 0, *length);
@@ -232,25 +239,42 @@ void
 raop_buffer_handle_resends(raop_buffer_t *raop_buffer, raop_resend_cb_t resend_cb, void *opaque)
 {
 	raop_buffer_entry_t *entry;
+	int first_seqnum;
+	int seqnum;
 
 	assert(raop_buffer);
 	assert(resend_cb);
 
-	if (seqnum_cmp(raop_buffer->first_seqnum, raop_buffer->last_seqnum) < 0) {
-		int seqnum, count;
+	/* First find the first unavailable packet seqnum */
+	for (seqnum=raop_buffer->first_seqnum; seqnum_cmp(seqnum, raop_buffer->last_seqnum)<0; seqnum++) {
+		entry = &raop_buffer->entries[seqnum % RAOP_BUFFER_LENGTH];
+		if (entry->state == RAOP_STATE_UNAVAILABLE) {
+			break;
+		}
+	}
+	first_seqnum = seqnum;
 
-		for (seqnum=raop_buffer->first_seqnum; seqnum_cmp(seqnum, raop_buffer->last_seqnum)<0; seqnum++) {
+	if (seqnum_cmp(first_seqnum, raop_buffer->last_seqnum) < 0) {
+		int count;
+
+		for (seqnum=first_seqnum; seqnum_cmp(seqnum, raop_buffer->last_seqnum)<0; seqnum++) {
 			entry = &raop_buffer->entries[seqnum % RAOP_BUFFER_LENGTH];
 			if (entry->state != RAOP_STATE_UNAVAILABLE) {
 				break;
 			}
-			entry->state = RAOP_STATE_RESEND_REQUESTED;
+			if (entry->resend_count >= RAOP_BUFFER_MAX_RESENDS) {
+				logger_log(raop_buffer->logger, LOGGER_WARNING,
+					   "Resend count for %u exceeded, waiting for resend", seqnum);
+				entry->state = RAOP_STATE_WAITING_RESEND;
+				break;
+			}
+			entry->resend_count++;
 		}
-		if (seqnum_cmp(seqnum, raop_buffer->first_seqnum) == 0) {
+		if (seqnum_cmp(seqnum, first_seqnum) == 0) {
 			return;
 		}
-		count = seqnum_cmp(seqnum, raop_buffer->first_seqnum);
-		resend_cb(opaque, raop_buffer->first_seqnum, count);
+		count = seqnum_cmp(seqnum, first_seqnum);
+		resend_cb(opaque, first_seqnum, count);
 	}
 }
 

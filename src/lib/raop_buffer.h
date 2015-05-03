@@ -16,12 +16,13 @@
 #define RAOP_BUFFER_H
 
 #include "raop_decoder.h"
+#include "logger.h"
 
 typedef struct raop_buffer_s raop_buffer_t;
 
 typedef int (*raop_resend_cb_t)(void *opaque, unsigned short seqno, unsigned short count);
 
-raop_buffer_t *raop_buffer_init(raop_decoder_t *raop_decoder);
+raop_buffer_t *raop_buffer_init(logger_t *logger, raop_decoder_t *raop_decoder);
 
 int raop_buffer_queue(raop_buffer_t *raop_buffer, unsigned char *data, unsigned short datalen, int use_seqnum);
 const void *raop_buffer_dequeue(raop_buffer_t *raop_buffer, int *length, unsigned int *timestamp, int no_resend);
