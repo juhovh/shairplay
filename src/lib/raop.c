@@ -312,7 +312,7 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 				logger_log(conn->raop->logger, LOGGER_WARNING, "RAOP not initialized at SET_PARAMETER volume");
 			}
 			free(datastr);
-		} else if (!strcmp(content_type, "image/jpeg")) {
+		} else if (!strcmp(content_type, "image/jpeg") || !strcmp(content_type, "image/png")) {
 			logger_log(conn->raop->logger, LOGGER_INFO, "Got image data of %d bytes", datalen);
 			if (conn->raop_rtp) {
 				raop_rtp_set_coverart(conn->raop_rtp, data, datalen);
