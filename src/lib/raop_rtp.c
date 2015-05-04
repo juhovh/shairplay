@@ -50,6 +50,8 @@ struct raop_rtp_s {
 	int metadata_len;
 	unsigned char *coverart;
 	int coverart_len;
+	const char *dacp_id;
+	const char *active_remote_header;
 
 	int flush;
 	thread_handle_t thread;
@@ -166,6 +168,8 @@ raop_rtp_destroy(raop_rtp_t *raop_rtp)
 		raop_buffer_destroy(raop_rtp->buffer);
 		free(raop_rtp->metadata);
 		free(raop_rtp->coverart);
+		free((char *)raop_rtp->dacp_id);
+		free((char *)raop_rtp->active_remote_header);
 		free(raop_rtp);
 	}
 }
@@ -258,6 +262,8 @@ raop_rtp_process_events(raop_rtp_t *raop_rtp, void *cb_data)
 	int metadata_len;
 	unsigned char *coverart;
 	int coverart_len;
+	const char *dacp_id;
+	const char *active_remote_header;
 
 	assert(raop_rtp);
 
@@ -287,6 +293,13 @@ raop_rtp_process_events(raop_rtp_t *raop_rtp, void *cb_data)
 	coverart_len = raop_rtp->coverart_len;
 	raop_rtp->coverart = NULL;
 	raop_rtp->coverart_len = 0;
+	
+	/* Read DACP remote control data */
+	dacp_id = raop_rtp->dacp_id;
+	active_remote_header = raop_rtp->active_remote_header;
+	raop_rtp->dacp_id = NULL;
+	raop_rtp->active_remote_header = NULL;
+
 	MUTEX_UNLOCK(raop_rtp->run_mutex);
 
 	/* Call set_volume callback if changed */
@@ -316,6 +329,15 @@ raop_rtp_process_events(raop_rtp_t *raop_rtp, void *cb_data)
 		}
 		free(coverart);
 		coverart = NULL;
+	}
+	if (dacp_id && active_remote_header) {
+		if (raop_rtp->callbacks.audio_remote_control_id) {
+			raop_rtp->callbacks.audio_remote_control_id(raop_rtp->callbacks.cls, dacp_id, active_remote_header);
+		}
+		free((char *)dacp_id);
+		dacp_id = NULL;
+		free((char *)active_remote_header);
+		active_remote_header = NULL;
 	}
 	return 0;
 }
@@ -651,6 +673,22 @@ raop_rtp_set_coverart(raop_rtp_t *raop_rtp, const char *data, int datalen)
 	MUTEX_LOCK(raop_rtp->run_mutex);
 	raop_rtp->coverart = coverart;
 	raop_rtp->coverart_len = datalen;
+	MUTEX_UNLOCK(raop_rtp->run_mutex);
+}
+
+void 
+raop_rtp_remote_control_id(raop_rtp_t *raop_rtp, const char *dacp_id, const char *active_remote_header)
+{
+	assert(raop_rtp);
+
+	if (!dacp_id || !active_remote_header) {
+		return;
+	}
+
+	/* Set dacp stuff in thread instead */
+	MUTEX_LOCK(raop_rtp->run_mutex);
+	raop_rtp->dacp_id = strdup(dacp_id);
+	raop_rtp->active_remote_header = strdup(active_remote_header);
 	MUTEX_UNLOCK(raop_rtp->run_mutex);
 }
 

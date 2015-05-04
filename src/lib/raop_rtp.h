@@ -33,6 +33,7 @@ void raop_rtp_start(raop_rtp_t *raop_rtp, int use_udp, unsigned short control_rp
 void raop_rtp_set_volume(raop_rtp_t *raop_rtp, float volume);
 void raop_rtp_set_metadata(raop_rtp_t *raop_rtp, const char *data, int datalen);
 void raop_rtp_set_coverart(raop_rtp_t *raop_rtp, const char *data, int datalen);
+void raop_rtp_remote_control_id(raop_rtp_t *raop_rtp, const char *dacp_id, const char *active_remote_header);
 void raop_rtp_flush(raop_rtp_t *raop_rtp, int next_seq);
 void raop_rtp_stop(raop_rtp_t *raop_rtp);
 void raop_rtp_destroy(raop_rtp_t *raop_rtp);
