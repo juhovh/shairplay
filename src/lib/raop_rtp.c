@@ -50,8 +50,8 @@ struct raop_rtp_s {
 	int metadata_len;
 	unsigned char *coverart;
 	int coverart_len;
-	const char *dacp_id;
-	const char *active_remote_header;
+	char *dacp_id;
+	char *active_remote_header;
 
 	int flush;
 	thread_handle_t thread;
@@ -168,8 +168,8 @@ raop_rtp_destroy(raop_rtp_t *raop_rtp)
 		raop_buffer_destroy(raop_rtp->buffer);
 		free(raop_rtp->metadata);
 		free(raop_rtp->coverart);
-		free((char *)raop_rtp->dacp_id);
-		free((char *)raop_rtp->active_remote_header);
+		free(raop_rtp->dacp_id);
+		free(raop_rtp->active_remote_header);
 		free(raop_rtp);
 	}
 }
@@ -262,8 +262,8 @@ raop_rtp_process_events(raop_rtp_t *raop_rtp, void *cb_data)
 	int metadata_len;
 	unsigned char *coverart;
 	int coverart_len;
-	const char *dacp_id;
-	const char *active_remote_header;
+	char *dacp_id;
+	char *active_remote_header;
 
 	assert(raop_rtp);
 
@@ -334,9 +334,9 @@ raop_rtp_process_events(raop_rtp_t *raop_rtp, void *cb_data)
 		if (raop_rtp->callbacks.audio_remote_control_id) {
 			raop_rtp->callbacks.audio_remote_control_id(raop_rtp->callbacks.cls, dacp_id, active_remote_header);
 		}
-		free((char *)dacp_id);
+		free(dacp_id);
+		free(active_remote_header);
 		dacp_id = NULL;
-		free((char *)active_remote_header);
 		active_remote_header = NULL;
 	}
 	return 0;
