@@ -247,6 +247,19 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 		const char *transport;
 		char buffer[1024];
 		int use_udp;
+		const char *dacp_id;
+		const char *active_remote_header;
+
+		dacp_id = http_request_get_header(request, "DACP-ID");
+		active_remote_header = http_request_get_header(request, "Active-Remote");
+
+		if (dacp_id && active_remote_header) {
+			logger_log(conn->raop->logger, LOGGER_DEBUG, "DACP-ID: %s", dacp_id);
+			logger_log(conn->raop->logger, LOGGER_DEBUG, "Active-Remote: %s", active_remote_header);
+			if (conn->raop_rtp) {
+			    raop_rtp_remote_control_id(conn->raop_rtp, dacp_id, active_remote_header);
+			}
+		}
 
 		transport = http_request_get_header(request, "Transport");
 		assert(transport);
