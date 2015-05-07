@@ -15,6 +15,7 @@ Makefile
 *.la
 *.a
 m4/
+compile
 missing
 libtool
 ltmain.sh
