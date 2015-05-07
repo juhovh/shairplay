@@ -38,6 +38,7 @@ typedef CONDITION_VARIABLE cond_handle_t;
 
 #define COND_CREATE(handle) InitializeConditionVariable(&(handle))
 #define COND_WAIT(handle, mutex) SleepConditionVariableSRW(&(handle), &(mutex), INFINITE, 0)
+#define COND_TIMEDWAIT(handle, mutex, millis) SleepConditionVariableSRW(&(handle), &(mutex), (millis), 0)
 #define COND_SIGNAL(handle) WakeConditionVariable(&(handle))
 #define COND_BROADCAST(handle) WakeAllConditionVariable(&(handle))
 #define COND_DESTROY(handle) do {} while(0)
@@ -46,6 +47,7 @@ typedef HANDLE sem_handle_t;
 
 #define SEM_CREATE(handle, value) handle = CreateSemaphore(NULL, (value), LONG_MAX, NULL)
 #define SEM_WAIT(handle) WaitForSingleObject((handle), INFINITE)
+#define SEM_TIMEDWAIT(handle, millis) WaitForSingleObject((handle), millis)
 #define SEM_POST(handle) ReleaseSemaphore((handle), 1, NULL)
 #define SEM_DESTROY(handle) CloseHandle(handle)
 
@@ -54,6 +56,7 @@ typedef HANDLE sem_handle_t;
 #include <pthread.h>
 #include <semaphore.h>
 #include <unistd.h>
+#include <time.h>
 
 #define sleepms(x) usleep((x)*1000)
 
@@ -75,6 +78,12 @@ typedef pthread_cond_t cond_handle_t;
 
 #define COND_CREATE(handle) pthread_cond_init(&(handle), NULL)
 #define COND_WAIT(handle, mutex) pthread_cond_wait(&(handle), &(mutex))
+#define COND_TIMEDWAIT(handle, mutex, millis) do { \
+	struct timespec _abstime; \
+	_abstime.tv_sec = ((millis) / 1000; \
+	_abstime.tv_nsec = ((millis) % 1000) * 1000000; \
+	pthread_cond_timedwait(&(handle), &(mutex), &_abstime); \
+} while (0)
 #define COND_SIGNAL(handle) pthread_cond_signal(&(handle))
 #define COND_BROADCAST(handle) pthread_cond_broadcast(&(handle))
 #define COND_DESTROY(handle) pthread_cond_destroy(&(handle))
@@ -83,6 +92,12 @@ typedef sem_t sem_handle_t;
 
 #define SEM_CREATE(handle, value) sem_init(&(handle), 0, (value))
 #define SEM_WAIT(handle) sem_wait(&(handle))
+#define SEM_TIMEDWAIT(handle, millis) do { \
+	struct timespec _abstime; \
+	_abstime.tv_sec = ((millis) / 1000; \
+	_abstime.tv_nsec = ((millis) % 1000) * 1000000; \
+	sem_timedwait(&(handle), &_abstime); \
+} while (0)
 #define SEM_POST(handle) sem_post(&(handle))
 #define SEM_DESTROY(handle) sem_destroy(&(handle))
 
