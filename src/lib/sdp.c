@@ -35,6 +35,7 @@ struct sdp_s {
 	const char *rsaaeskey;
 	const char *aesiv;
 	const char *min_latency;
+	const char *max_latency;
 };
 
 static void
@@ -85,6 +86,8 @@ parse_sdp_line(sdp_t *sdp, char *line)
 				sdp->aesiv = value;
 			} else if (!strcmp(key, "min-latency")) {
 				sdp->min_latency = value;
+			} else if (!strcmp(key, "max-latency")) {
+				sdp->max_latency = value;
 			}
 			break;
 		}

@@ -212,6 +212,8 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 			sdp_t *sdp;
 			const char *remotestr, *rtpmapstr, *fmtpstr, *aeskeystr, *aesivstr;
 
+			logger_log(conn->raop->logger, LOGGER_DEBUG, "SDP specification:\n%.*s", datalen, data);
+
 			sdp = sdp_init(data, datalen);
 			remotestr = sdp_get_connection(sdp);
 			rtpmapstr = sdp_get_rtpmap(sdp);

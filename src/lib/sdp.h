@@ -30,6 +30,7 @@ const char *sdp_get_fmtp(sdp_t *sdp);
 const char *sdp_get_rsaaeskey(sdp_t *sdp);
 const char *sdp_get_aesiv(sdp_t *sdp);
 const char *sdp_get_min_latency(sdp_t *sdp);
+const char *sdp_get_max_latency(sdp_t *sdp);
 
 void sdp_destroy(sdp_t *sdp);
 
