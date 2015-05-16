@@ -27,7 +27,7 @@ write:
 ```
 sudo apt-get install autoconf automake libtool
 sudo apt-get install libltdl-dev libao-dev libavahi-compat-libdnssd-dev \
-			libplist-dev libfdk-aac-dev
+			libplist-dev libfdk-aac-dev libssl-dev
 sudo apt-get install avahi-daemon
 ```
 
