@@ -30,7 +30,7 @@ struct http_request_s {
 	int headers_size;
 	int headers_index;
 
-	char *data;
+	void *data;
 	int datalen;
 
 	int complete;
@@ -171,7 +171,7 @@ http_request_destroy(http_request_t *request)
 }
 
 int
-http_request_add_data(http_request_t *request, const char *data, int datalen)
+http_request_add_data(http_request_t *request, const void *data, int datalen)
 {
 	int ret;
 
@@ -240,7 +240,7 @@ http_request_get_header(http_request_t *request, const char *name)
 	return NULL;
 }
 
-const char *
+const void *
 http_request_get_data(http_request_t *request, int *datalen)
 {
 	assert(request);

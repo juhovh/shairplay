@@ -33,6 +33,7 @@ struct sdp_s {
 	const char *rtpmap;
 	const char *fmtp;
 	const char *rsaaeskey;
+	const char *fpaeskey;
 	const char *aesiv;
 	const char *min_latency;
 	const char *max_latency;
@@ -82,6 +83,8 @@ parse_sdp_line(sdp_t *sdp, char *line)
 				sdp->fmtp = value;
 			} else if (!strcmp(key, "rsaaeskey")) {
 				sdp->rsaaeskey = value;
+			} else if (!strcmp(key, "fpaeskey")) {
+				sdp->fpaeskey = value;
 			} else if (!strcmp(key, "aesiv")) {
 				sdp->aesiv = value;
 			} else if (!strcmp(key, "min-latency")) {
@@ -225,6 +228,14 @@ sdp_get_rsaaeskey(sdp_t *sdp)
 	assert(sdp);
 
 	return sdp->rsaaeskey;
+}
+
+const char *
+sdp_get_fpaeskey(sdp_t *sdp)
+{
+	assert(sdp);
+
+	return sdp->fpaeskey;
 }
 
 const char *

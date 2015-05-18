@@ -18,6 +18,7 @@
 /* For raop_callbacks_t */
 #include "raop.h"
 #include "raop_decoder.h"
+#include "raop_output.h"
 #include "logger.h"
 
 #define RAOP_PACKET_LEN 32768
@@ -25,17 +26,11 @@
 typedef struct raop_rtp_s raop_rtp_t;
 
 raop_rtp_t *raop_rtp_init(logger_t *logger, raop_decoder_t *decoder,
-                          raop_callbacks_t *callbacks, const char *remote);
+                          raop_output_t *output, const char *remote);
 void raop_rtp_start(raop_rtp_t *raop_rtp, int use_udp,
                     unsigned short control_rport, unsigned short timing_rport,
                     unsigned short *control_lport, unsigned short *timing_lport,
                     unsigned short *data_lport);
-void raop_rtp_set_volume(raop_rtp_t *raop_rtp, float volume);
-void raop_rtp_set_metadata(raop_rtp_t *raop_rtp, const char *data, int datalen);
-void raop_rtp_set_coverart(raop_rtp_t *raop_rtp, const char *data, int datalen);
-void raop_rtp_remote_control_id(raop_rtp_t *raop_rtp, const char *dacp_id, const char *active_remote_header);
-void raop_rtp_set_progress(raop_rtp_t *raop_rtp, unsigned int start, unsigned int curr, unsigned int end);
-void raop_rtp_flush(raop_rtp_t *raop_rtp, int next_seq);
 void raop_rtp_stop(raop_rtp_t *raop_rtp);
 void raop_rtp_destroy(raop_rtp_t *raop_rtp);
 

@@ -28,6 +28,7 @@ const char *sdp_get_media(sdp_t *sdp);
 const char *sdp_get_rtpmap(sdp_t *sdp);
 const char *sdp_get_fmtp(sdp_t *sdp);
 const char *sdp_get_rsaaeskey(sdp_t *sdp);
+const char *sdp_get_fpaeskey(sdp_t *sdp);
 const char *sdp_get_aesiv(sdp_t *sdp);
 const char *sdp_get_min_latency(sdp_t *sdp);
 const char *sdp_get_max_latency(sdp_t *sdp);

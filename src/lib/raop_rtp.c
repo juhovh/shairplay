@@ -28,12 +28,10 @@
 #include "logger.h"
 #include "bio.h"
 
-#define NO_FLUSH (-42)
-
 struct raop_rtp_s {
 	logger_t *logger;
 	raop_decoder_t *decoder;
-	raop_callbacks_t callbacks;
+	raop_output_t *output;
 
 	/* Buffer to handle all resends */
 	raop_buffer_t *buffer;
@@ -47,20 +45,6 @@ struct raop_rtp_s {
 	int running;
 	int joined;
 
-	float volume;
-	int volume_changed;
-	unsigned char *metadata;
-	int metadata_len;
-	unsigned char *coverart;
-	int coverart_len;
-	char *dacp_id;
-	char *active_remote_header;
-	unsigned int progress_start;
-	unsigned int progress_curr;
-	unsigned int progress_end;
-	int progress_changed;
-
-	int flush;
 	thread_handle_t thread;
 	mutex_handle_t run_mutex;
 	/* MUTEX LOCKED VARIABLES END */
@@ -141,24 +125,26 @@ raop_rtp_parse_remote(raop_rtp_t *raop_rtp, const char *remote)
 static int
 raop_rtp_get_clock_internal(raop_rtp_t *raop_rtp, unsigned long long* clock)
 {
+/*
 	if (raop_rtp->callbacks.audio_get_clock) {
 		raop_rtp->callbacks.audio_get_clock(raop_rtp->callbacks.cls, clock);
 		*clock += RAOP_NTP_CLOCK_BASE;
 		return 0;
 	} else {
+*/
 		return -1;
+/*
 	}
+*/
 }
 
 raop_rtp_t *
-raop_rtp_init(logger_t *logger, raop_decoder_t *decoder,
-              raop_callbacks_t *callbacks, const char *remote)
+raop_rtp_init(logger_t *logger, raop_decoder_t *decoder, raop_output_t *output, const char *remote)
 {
 	raop_rtp_t *raop_rtp;
 
 	assert(logger);
 	assert(decoder);
-	assert(callbacks);
 	assert(remote);
 
 	raop_rtp = calloc(1, sizeof(raop_rtp_t));
@@ -167,7 +153,7 @@ raop_rtp_init(logger_t *logger, raop_decoder_t *decoder,
 	}
 	raop_rtp->logger = logger;
 	raop_rtp->decoder = decoder;
-	memcpy(&raop_rtp->callbacks, callbacks, sizeof(raop_callbacks_t));
+	raop_rtp->output = output;
 
 	raop_rtp->buffer = raop_buffer_init(raop_rtp->logger, raop_rtp->decoder);
 	if (!raop_rtp->buffer) {
@@ -187,7 +173,6 @@ raop_rtp_init(logger_t *logger, raop_decoder_t *decoder,
 
 	raop_rtp->running = 0;
 	raop_rtp->joined = 1;
-	raop_rtp->flush = NO_FLUSH;
 	MUTEX_CREATE(raop_rtp->run_mutex);
 
 	return raop_rtp;
@@ -201,10 +186,6 @@ raop_rtp_destroy(raop_rtp_t *raop_rtp)
 
 		MUTEX_DESTROY(raop_rtp->run_mutex);
 		raop_buffer_destroy(raop_rtp->buffer);
-		free(raop_rtp->metadata);
-		free(raop_rtp->coverart);
-		free(raop_rtp->dacp_id);
-		free(raop_rtp->active_remote_header);
 		free(raop_rtp);
 	}
 }
@@ -327,122 +308,10 @@ raop_rtp_request_ntp(raop_rtp_t *raop_rtp)
 	return 0;
 }
 
-static int
-raop_rtp_process_events(raop_rtp_t *raop_rtp, void *cb_data)
-{
-	int flush;
-	float volume;
-	int volume_changed;
-	unsigned char *metadata;
-	int metadata_len;
-	unsigned char *coverart;
-	int coverart_len;
-	char *dacp_id;
-	char *active_remote_header;
-	unsigned int progress_start;
-	unsigned int progress_curr;
-	unsigned int progress_end;
-	int progress_changed;
-
-	assert(raop_rtp);
-
-	MUTEX_LOCK(raop_rtp->run_mutex);
-	if (!raop_rtp->running) {
-		MUTEX_UNLOCK(raop_rtp->run_mutex);
-		return 1;
-	}
-
-	/* Read the volume level */
-	volume = raop_rtp->volume;
-	volume_changed = raop_rtp->volume_changed;
-	raop_rtp->volume_changed = 0;
-
-	/* Read the flush value */
-	flush = raop_rtp->flush;
-	raop_rtp->flush = NO_FLUSH;
-
-	/* Read the metadata */
-	metadata = raop_rtp->metadata;
-	metadata_len = raop_rtp->metadata_len;
-	raop_rtp->metadata = NULL;
-	raop_rtp->metadata_len = 0;
-
-	/* Read the coverart */
-	coverart = raop_rtp->coverart;
-	coverart_len = raop_rtp->coverart_len;
-	raop_rtp->coverart = NULL;
-	raop_rtp->coverart_len = 0;
-	
-	/* Read DACP remote control data */
-	dacp_id = raop_rtp->dacp_id;
-	active_remote_header = raop_rtp->active_remote_header;
-	raop_rtp->dacp_id = NULL;
-	raop_rtp->active_remote_header = NULL;
-
-	/* Read the progress values */
-	progress_start = raop_rtp->progress_start;
-	progress_curr = raop_rtp->progress_curr;
-	progress_end = raop_rtp->progress_end;
-	progress_changed = raop_rtp->progress_changed;
-	raop_rtp->progress_changed = 0;
-
-	MUTEX_UNLOCK(raop_rtp->run_mutex);
-
-	/* Call set_volume callback if changed */
-	if (volume_changed) {
-		if (raop_rtp->callbacks.audio_set_volume) {
-			raop_rtp->callbacks.audio_set_volume(raop_rtp->callbacks.cls, cb_data, volume);
-		}
-	}
-
-	/* Handle flush if requested */
-	if (flush != NO_FLUSH) {
-		raop_buffer_flush(raop_rtp->buffer, flush);
-		if (raop_rtp->callbacks.audio_flush) {
-			raop_rtp->callbacks.audio_flush(raop_rtp->callbacks.cls, cb_data);
-		}
-	}
-
-	if (metadata != NULL) {
-		if (raop_rtp->callbacks.audio_set_metadata) {
-			raop_rtp->callbacks.audio_set_metadata(raop_rtp->callbacks.cls, cb_data, metadata, metadata_len);
-		}
-		free(metadata);
-		metadata = NULL;
-	}
-
-	if (coverart != NULL) {
-		if (raop_rtp->callbacks.audio_set_coverart) {
-			raop_rtp->callbacks.audio_set_coverart(raop_rtp->callbacks.cls, cb_data, coverart, coverart_len);
-		}
-		free(coverart);
-		coverart = NULL;
-	}
-	if (dacp_id && active_remote_header) {
-		if (raop_rtp->callbacks.audio_remote_control_id) {
-			raop_rtp->callbacks.audio_remote_control_id(raop_rtp->callbacks.cls, dacp_id, active_remote_header);
-		}
-		free(dacp_id);
-		free(active_remote_header);
-		dacp_id = NULL;
-		active_remote_header = NULL;
-	}
-
-	if (progress_changed) {
-		if (raop_rtp->callbacks.audio_set_progress) {
-			raop_rtp->callbacks.audio_set_progress(raop_rtp->callbacks.cls, cb_data, progress_start, progress_curr, progress_end);
-		}
-	}
-	return 0;
-}
-
 static THREAD_RETVAL
 raop_rtp_thread_udp(void *arg)
 {
 	raop_rtp_t *raop_rtp = arg;
-	unsigned int sample_rate;
-	unsigned char bit_depth;
-	unsigned char channels;
 	unsigned char packet[RAOP_PACKET_LEN];
 	unsigned int packetlen;
 	struct sockaddr_storage saddr;
@@ -452,22 +321,19 @@ raop_rtp_thread_udp(void *arg)
 
 	assert(raop_rtp);
 
-	sample_rate = raop_decoder_get_sample_rate(raop_rtp->decoder);
-	bit_depth = raop_decoder_get_bit_depth(raop_rtp->decoder);
-	channels = raop_decoder_get_channels(raop_rtp->decoder);
-	cb_data = raop_rtp->callbacks.audio_init(raop_rtp->callbacks.cls,
-	                                         bit_depth, channels, sample_rate);
-
 	while (1) {
 		fd_set rfds;
 		struct timeval tv;
 		int nfds, ret;
 		unsigned long long clock;
 
-		/* Check if we are still running and process callbacks */
-		if (raop_rtp_process_events(raop_rtp, cb_data)) {
+		/* Check if we are still running */
+		MUTEX_LOCK(raop_rtp->run_mutex);
+		if (!raop_rtp->running) {
+			MUTEX_UNLOCK(raop_rtp->run_mutex);
 			break;
 		}
+		MUTEX_UNLOCK(raop_rtp->run_mutex);
 
 		/* Request time every 3 seconds */
 		if (raop_rtp_get_clock_internal(raop_rtp, &clock) == 0) {
@@ -503,8 +369,6 @@ raop_rtp_thread_udp(void *arg)
 		}
 
 		if (FD_ISSET(raop_rtp->csock, &rfds)) {
-			char type = 0x00;
-
 			saddrlen = sizeof(saddr);
 			packetlen = recvfrom(raop_rtp->csock, (char *)packet, sizeof(packet), 0,
 			                     (struct sockaddr *)&saddr, &saddrlen);
@@ -513,38 +377,40 @@ raop_rtp_thread_udp(void *arg)
 			memcpy(&raop_rtp->control_saddr, &saddr, saddrlen);
 			raop_rtp->control_saddr_len = saddrlen;
 
-			if (packetlen >= 2) {
-				type = packet[1] & ~0x80;
-			}
+			if (packetlen >= 12) {
+				char type = packet[1] & ~0x80;
 
-			logger_log(raop_rtp->logger, LOGGER_DEBUG, "Got control packet of type 0x%02x", type);
-			if (type == 0x56 && packetlen >= 12) {
-				/* Handle resent data packet */
-				int ret = raop_buffer_queue(raop_rtp->buffer, packet+4, packetlen-4, 1);
-				assert(ret >= 0);
-			} else if (type == 0x54 && packetlen >= 20) {
-				unsigned int       now_rtp;
-				raop_rtp->sync_rtp = bio_get_be_u32(&packet[4]) - 11025;
-				raop_rtp->sync_ntp = bio_get_be_u64(&packet[8]);
-				now_rtp            = bio_get_be_u32(&packet[16]);
-				logger_log(raop_rtp->logger, LOGGER_DEBUG, "Got time sync packet 0x%08x, 0x%08x, %u, %u", (unsigned int)raop_rtp->sync_ntp, (unsigned int)(raop_rtp->sync_ntp >> 32), raop_rtp->sync_rtp, now_rtp - raop_rtp->sync_rtp);
-				if (raop_rtp->callbacks.audio_sync) {
-					unsigned long long clock;
-					if (raop_rtp->ntp_dispersion < RAOP_NTP_MAXDIST) {
-						raop_rtp->callbacks.audio_sync(raop_rtp->callbacks.cls,
-									       cb_data,
-									       raop_rtp->sync_ntp - raop_rtp->ntp_offset - RAOP_NTP_CLOCK_BASE,
-									       raop_rtp->ntp_dispersion,
-									       raop_rtp->sync_rtp,
-									       now_rtp - raop_rtp->sync_rtp);
-					} else if (raop_rtp_get_clock_internal(raop_rtp, &clock) == 0) {
-						raop_rtp->callbacks.audio_sync(raop_rtp->callbacks.cls,
-									       cb_data,
-									       clock  - RAOP_NTP_CLOCK_BASE,
-									       RAOP_NTP_MAXDIST*RAOP_NTP_COUNT,
-									       raop_rtp->sync_rtp,
-									       now_rtp - raop_rtp->sync_rtp);
+				logger_log(raop_rtp->logger, LOGGER_DEBUG, "Got control packet of type 0x%02x", type);
+				if (type == 0x56) {
+					/* Handle resent data packet */
+					int ret = raop_buffer_queue(raop_rtp->buffer, packet+4, packetlen-4, 1);
+					assert(ret >= 0);
+				} else if (type == 0x54 && packetlen >= 20) {
+					unsigned int       now_rtp;
+					raop_rtp->sync_rtp = bio_get_be_u32(&packet[4]) - 11025;
+					raop_rtp->sync_ntp = bio_get_be_u64(&packet[8]);
+					now_rtp            = bio_get_be_u32(&packet[16]);
+					logger_log(raop_rtp->logger, LOGGER_DEBUG, "Got time sync packet 0x%08x, 0x%08x, %u, %u", (unsigned int)raop_rtp->sync_ntp, (unsigned int)(raop_rtp->sync_ntp >> 32), raop_rtp->sync_rtp, now_rtp - raop_rtp->sync_rtp);
+/*
+					if (raop_rtp->callbacks.audio_sync) {
+						unsigned long long clock;
+						if (raop_rtp->ntp_dispersion < RAOP_NTP_MAXDIST) {
+							raop_rtp->callbacks.audio_sync(raop_rtp->callbacks.cls,
+							                               cb_data,
+							                               raop_rtp->sync_ntp - raop_rtp->ntp_offset - RAOP_NTP_CLOCK_BASE,
+							                               raop_rtp->ntp_dispersion,
+							                               raop_rtp->sync_rtp,
+							                               now_rtp - raop_rtp->sync_rtp);
+						} else if (raop_rtp_get_clock_internal(raop_rtp, &clock) == 0) {
+							raop_rtp->callbacks.audio_sync(raop_rtp->callbacks.cls,
+							                               cb_data,
+							                               clock  - RAOP_NTP_CLOCK_BASE,
+							                               RAOP_NTP_MAXDIST*RAOP_NTP_COUNT,
+							                               raop_rtp->sync_rtp,
+							                               now_rtp - raop_rtp->sync_rtp);
+						}
 					}
+*/
 				}
 			}
 		} else if (FD_ISSET(raop_rtp->tsock, &rfds)) {
@@ -585,7 +451,7 @@ raop_rtp_thread_udp(void *arg)
 
 				/* Decode all frames in queue */
 				while ((audiobuf = raop_buffer_dequeue(raop_rtp->buffer, &audiobuflen, &timestamp, no_resend))) {
-					raop_rtp->callbacks.audio_process(raop_rtp->callbacks.cls, cb_data, audiobuf, audiobuflen, timestamp);
+					raop_output_process(raop_rtp->output, timestamp, audiobuf, audiobuflen);
 				}
 
 				/* Handle possible resend requests */
@@ -596,7 +462,6 @@ raop_rtp_thread_udp(void *arg)
 		}
 	}
 	logger_log(raop_rtp->logger, LOGGER_INFO, "Exiting UDP RAOP thread");
-	raop_rtp->callbacks.audio_destroy(raop_rtp->callbacks.cls, cb_data);
 
 	return 0;
 }
@@ -606,9 +471,6 @@ raop_rtp_thread_tcp(void *arg)
 {
 	raop_rtp_t *raop_rtp = arg;
 	int stream_fd = -1;
-	unsigned int sample_rate;
-	unsigned char bit_depth;
-	unsigned char channels;
 	unsigned char packet[RAOP_PACKET_LEN];
 	unsigned int packetlen = 0;
 
@@ -616,21 +478,18 @@ raop_rtp_thread_tcp(void *arg)
 
 	assert(raop_rtp);
 
-	sample_rate = raop_decoder_get_sample_rate(raop_rtp->decoder);
-	bit_depth = raop_decoder_get_bit_depth(raop_rtp->decoder);
-	channels = raop_decoder_get_channels(raop_rtp->decoder);
-	cb_data = raop_rtp->callbacks.audio_init(raop_rtp->callbacks.cls,
-	                                         bit_depth, channels, sample_rate);
-
 	while (1) {
 		fd_set rfds;
 		struct timeval tv;
 		int nfds, ret;
 
-		/* Check if we are still running and process callbacks */
-		if (raop_rtp_process_events(raop_rtp, cb_data)) {
+		/* Check if we are still running */
+		MUTEX_LOCK(raop_rtp->run_mutex);
+		if (!raop_rtp->running) {
+			MUTEX_UNLOCK(raop_rtp->run_mutex);
 			break;
 		}
+		MUTEX_UNLOCK(raop_rtp->run_mutex);
 
 		/* Set timeout value to 5ms */
 		tv.tv_sec = 0;
@@ -714,7 +573,7 @@ raop_rtp_thread_tcp(void *arg)
 
 			/* Decode the received frame */
 			if ((audiobuf = raop_buffer_dequeue(raop_rtp->buffer, &audiobuflen, &timestamp, 1))) {
-				raop_rtp->callbacks.audio_process(raop_rtp->callbacks.cls, cb_data, audiobuf, audiobuflen, timestamp);
+				raop_output_process(raop_rtp->output, timestamp, audiobuf, audiobuflen);
 			}
 		}
 	}
@@ -725,7 +584,6 @@ raop_rtp_thread_tcp(void *arg)
 	}
 
 	logger_log(raop_rtp->logger, LOGGER_INFO, "Exiting TCP RAOP thread");
-	raop_rtp->callbacks.audio_destroy(raop_rtp->callbacks.cls, cb_data);
 
 	return 0;
 }
@@ -767,107 +625,6 @@ raop_rtp_start(raop_rtp_t *raop_rtp, int use_udp, unsigned short control_rport, 
 	} else {
 		THREAD_CREATE(raop_rtp->thread, raop_rtp_thread_tcp, raop_rtp);
 	}
-	MUTEX_UNLOCK(raop_rtp->run_mutex);
-}
-
-void
-raop_rtp_set_volume(raop_rtp_t *raop_rtp, float volume)
-{
-	assert(raop_rtp);
-
-	if (volume > 0.0f) {
-		volume = 0.0f;
-	} else if (volume < -144.0f) {
-		volume = -144.0f;
-	}
-
-	/* Set volume in thread instead */
-	MUTEX_LOCK(raop_rtp->run_mutex);
-	raop_rtp->volume = volume;
-	raop_rtp->volume_changed = 1;
-	MUTEX_UNLOCK(raop_rtp->run_mutex);
-}
-
-void
-raop_rtp_set_metadata(raop_rtp_t *raop_rtp, const char *data, int datalen)
-{
-	unsigned char *metadata;
-
-	assert(raop_rtp);
-
-	if (datalen <= 0) {
-		return;
-	}
-	metadata = malloc(datalen);
-	assert(metadata);
-	memcpy(metadata, data, datalen);
-
-	/* Set metadata in thread instead */
-	MUTEX_LOCK(raop_rtp->run_mutex);
-	raop_rtp->metadata = metadata;
-	raop_rtp->metadata_len = datalen;
-	MUTEX_UNLOCK(raop_rtp->run_mutex);
-}
-
-void
-raop_rtp_set_coverart(raop_rtp_t *raop_rtp, const char *data, int datalen)
-{
-	unsigned char *coverart;
-
-	assert(raop_rtp);
-
-	if (datalen <= 0) {
-		return;
-	}
-	coverart = malloc(datalen);
-	assert(coverart);
-	memcpy(coverart, data, datalen);
-
-	/* Set coverart in thread instead */
-	MUTEX_LOCK(raop_rtp->run_mutex);
-	raop_rtp->coverart = coverart;
-	raop_rtp->coverart_len = datalen;
-	MUTEX_UNLOCK(raop_rtp->run_mutex);
-}
-
-void 
-raop_rtp_remote_control_id(raop_rtp_t *raop_rtp, const char *dacp_id, const char *active_remote_header)
-{
-	assert(raop_rtp);
-
-	if (!dacp_id || !active_remote_header) {
-		return;
-	}
-
-	/* Set dacp stuff in thread instead */
-	MUTEX_LOCK(raop_rtp->run_mutex);
-	raop_rtp->dacp_id = strdup(dacp_id);
-	raop_rtp->active_remote_header = strdup(active_remote_header);
-	MUTEX_UNLOCK(raop_rtp->run_mutex);
-}
-
-void
-raop_rtp_set_progress(raop_rtp_t *raop_rtp, unsigned int start, unsigned int curr, unsigned int end)
-{
-	assert(raop_rtp);
-
-	/* Set progress in thread instead */
-	MUTEX_LOCK(raop_rtp->run_mutex);
-	raop_rtp->progress_start = start;
-	raop_rtp->progress_curr = curr;
-	raop_rtp->progress_end = end;
-	raop_rtp->progress_changed = 1;
-	MUTEX_UNLOCK(raop_rtp->run_mutex);
-}
-
-void
-raop_rtp_flush(raop_rtp_t *raop_rtp, int next_seq)
-{
-	assert(raop_rtp);
-
-	/* Call flush in thread instead */
-	MUTEX_LOCK(raop_rtp->run_mutex);
-	raop_rtp->flush = next_seq;
 	MUTEX_UNLOCK(raop_rtp->run_mutex);
 }
 

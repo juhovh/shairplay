@@ -18,6 +18,8 @@
 #include <assert.h>
 
 #include "raop.h"
+#include "raop_decoder.h"
+#include "raop_output.h"
 #include "raop_rtp.h"
 #include "rsakey.h"
 #include "digest.h"
@@ -62,6 +64,7 @@ struct raop_conn_s {
 	raop_t *raop;
 	raop_decoder_t *raop_decoder;
 	raop_rtp_t *raop_rtp;
+	raop_output_t *raop_output;
 
 	unsigned char *local;
 	int locallen;
@@ -84,6 +87,7 @@ conn_init(void *opaque, unsigned char *local, int locallen, unsigned char *remot
 	}
 	conn->raop = opaque;
 	conn->raop_rtp = NULL;
+	conn->raop_output = NULL;
 
 	if (locallen == 4) {
 		logger_log(conn->raop->logger, LOGGER_INFO,
@@ -234,8 +238,10 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 
 			/* This is for safety, should already be NULL */
 			raop_rtp_destroy(conn->raop_rtp);
+			raop_output_destroy(conn->raop_output);
 			raop_decoder_destroy(conn->raop_decoder);
 			conn->raop_rtp = NULL;
+			conn->raop_output = NULL;
 			conn->raop_decoder = NULL;
 
 			conn->raop_decoder = raop_decoder_init(raop->logger, rtpmapstr, fmtpstr,
@@ -246,8 +252,15 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 			}
 
 			if (conn->raop_decoder) {
-				conn->raop_rtp = raop_rtp_init(raop->logger, conn->raop_decoder,
-				                               &raop->callbacks, remotestr);
+				conn->raop_output = raop_output_init(raop->logger, &raop->callbacks);
+			}
+			if (!conn->raop_output) {
+				logger_log(conn->raop->logger, LOGGER_ERR, "Error allocating the audio output");
+				http_response_set_disconnect(res, 1);
+			}
+
+			if (conn->raop_decoder && conn->raop_output) {
+				conn->raop_rtp = raop_rtp_init(raop->logger, conn->raop_decoder, conn->raop_output, remotestr);
 			}
 			if (!conn->raop_rtp) {
 				logger_log(raop->logger, LOGGER_ERR, "Error initializing the RTP handler");
@@ -262,16 +275,16 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 		char buffer[1024];
 		int use_udp;
 		const char *dacp_id;
-		const char *active_remote_header;
+		const char *active_remote;
 
 		dacp_id = http_request_get_header(request, "DACP-ID");
-		active_remote_header = http_request_get_header(request, "Active-Remote");
+		active_remote = http_request_get_header(request, "Active-Remote");
 
-		if (dacp_id && active_remote_header) {
+		if (dacp_id && active_remote) {
 			logger_log(conn->raop->logger, LOGGER_DEBUG, "DACP-ID: %s", dacp_id);
-			logger_log(conn->raop->logger, LOGGER_DEBUG, "Active-Remote: %s", active_remote_header);
-			if (conn->raop_rtp) {
-			    raop_rtp_remote_control_id(conn->raop_rtp, dacp_id, active_remote_header);
+			logger_log(conn->raop->logger, LOGGER_DEBUG, "Active-Remote: %s", active_remote);
+			if (conn->raop_output) {
+				raop_output_set_active_remote(conn->raop_output, dacp_id, active_remote);
 			}
 		}
 
@@ -303,10 +316,25 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 			}
 			free(original);
 		}
+
+		if (conn->raop_decoder && conn->raop_output) {
+			unsigned char bit_depth;
+			unsigned char channels;
+			unsigned int sample_rate;
+
+			bit_depth = raop_decoder_get_bit_depth(conn->raop_decoder);
+			channels = raop_decoder_get_channels(conn->raop_decoder);
+			sample_rate = raop_decoder_get_sample_rate(conn->raop_decoder);
+
+			raop_output_start(conn->raop_output, bit_depth, channels, sample_rate);
+		} else {
+			logger_log(conn->raop->logger, LOGGER_ERR, "Decoder or output not initialized at SETUP, playing will fail!");
+			http_response_set_disconnect(res, 1);
+		}
 		if (conn->raop_rtp) {
 			raop_rtp_start(conn->raop_rtp, use_udp, remote_cport, remote_tport, &cport, &tport, &dport);
 		} else {
-			logger_log(conn->raop->logger, LOGGER_ERR, "RAOP not initialized at SETUP, playing will fail!");
+			logger_log(conn->raop->logger, LOGGER_ERR, "RTP not initialized at SETUP, playing will fail!");
 			http_response_set_disconnect(res, 1);
 		}
 
@@ -333,34 +361,34 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 		if (!strcmp(content_type, "text/parameters")) {
 			char *datastr;
 			datastr = calloc(1, datalen+1);
-			if (data && datastr && conn->raop_rtp) {
+			if (data && datastr && conn->raop_output) {
 				memcpy(datastr, data, datalen);
 				if (!strncmp(datastr, "volume: ", 8)) {
 					float vol = 0.0;
 					sscanf(datastr+8, "%f", &vol);
-					raop_rtp_set_volume(conn->raop_rtp, vol);
+					raop_output_set_volume(conn->raop_output, vol);
 				} else if (!strncmp(datastr, "progress: ", 10)) {
 					unsigned int start, curr, end;
 					sscanf(datastr+10, "%u/%u/%u", &start, &curr, &end);
-					raop_rtp_set_progress(conn->raop_rtp, start, curr, end);
+					raop_output_set_progress(conn->raop_output, start, curr, end);
 				}
-			} else if (!conn->raop_rtp) {
-				logger_log(conn->raop->logger, LOGGER_WARNING, "RAOP not initialized at SET_PARAMETER");
+			} else if (!conn->raop_output) {
+				logger_log(conn->raop->logger, LOGGER_WARNING, "Output not initialized at SET_PARAMETER volume");
 			}
 			free(datastr);
-		} else if (!strcmp(content_type, "image/jpeg") || !strcmp(content_type, "image/png")) {
-			logger_log(conn->raop->logger, LOGGER_INFO, "Got image data of %d bytes", datalen);
-			if (conn->raop_rtp) {
-				raop_rtp_set_coverart(conn->raop_rtp, data, datalen);
+		} else if (!strncmp(content_type, "image/", 6)) {
+			logger_log(conn->raop->logger, LOGGER_INFO, "Got %s data of %d bytes", content_type, datalen);
+			if (conn->raop_output) {
+				raop_output_set_coverart(conn->raop_output, content_type, data, datalen);
 			} else {
-				logger_log(conn->raop->logger, LOGGER_WARNING, "RAOP not initialized at SET_PARAMETER coverart");
+				logger_log(conn->raop->logger, LOGGER_WARNING, "Output not initialized at SET_PARAMETER coverart");
 			}
 		} else if (!strcmp(content_type, "application/x-dmap-tagged")) {
 			logger_log(conn->raop->logger, LOGGER_INFO, "Got metadata of %d bytes", datalen);
-			if (conn->raop_rtp) {
-				raop_rtp_set_metadata(conn->raop_rtp, data, datalen);
+			if (conn->raop_output) {
+				raop_output_set_metadata(conn->raop_output, data, datalen);
 			} else {
-				logger_log(conn->raop->logger, LOGGER_WARNING, "RAOP not initialized at SET_PARAMETER metadata");
+				logger_log(conn->raop->logger, LOGGER_WARNING, "Output not initialized at SET_PARAMETER metadata");
 			}
 		}
 	} else if (!strcmp(method, "FLUSH")) {
@@ -374,18 +402,20 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 				next_seq = strtol(rtpinfo+4, NULL, 10);
 			}
 		}
-		if (conn->raop_rtp) {
-			raop_rtp_flush(conn->raop_rtp, next_seq);
+		if (conn->raop_output) {
+			raop_output_flush(conn->raop_output, next_seq);
 		} else {
 			logger_log(conn->raop->logger, LOGGER_WARNING, "RAOP not initialized at FLUSH");
 		}
 	} else if (!strcmp(method, "TEARDOWN")) {
 		http_response_add_header(res, "Connection", "close");
 
-		/* Destroy our RTP session */
+		/* Destroy all our session contexts */
 		raop_rtp_destroy(conn->raop_rtp);
+		raop_output_destroy(conn->raop_output);
 		raop_decoder_destroy(conn->raop_decoder);
 		conn->raop_rtp = NULL;
+		conn->raop_output = NULL;
 		conn->raop_decoder = NULL;
 	}
 	http_response_finish(res, NULL, 0);
@@ -401,6 +431,7 @@ conn_destroy(void *ptr)
 
 	/* This is done in case TEARDOWN was not called */
 	raop_rtp_destroy(conn->raop_rtp);
+	raop_output_destroy(conn->raop_output);
 	raop_decoder_destroy(conn->raop_decoder);
 
 	free(conn->local);
