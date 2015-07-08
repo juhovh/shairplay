@@ -338,10 +338,12 @@ httpd_thread(void *arg)
 
 	/* Close server sockets since they are not used any more */
 	if (httpd->server_fd4 != -1) {
+		shutdown(httpd->server_fd4, SHUT_RDWR);
 		closesocket(httpd->server_fd4);
 		httpd->server_fd4 = -1;
 	}
 	if (httpd->server_fd6 != -1) {
+		shutdown(httpd->server_fd6, SHUT_RDWR);
 		closesocket(httpd->server_fd6);
 		httpd->server_fd6 = -1;
 	}
