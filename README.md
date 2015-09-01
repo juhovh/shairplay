@@ -31,6 +31,8 @@ sudo apt-get install libltdl-dev libao-dev libavahi-compat-libdnssd-dev \
 sudo apt-get install avahi-daemon
 ```
 
+Note: The Raspbian apt repositories do not have [libplist](https://github.com/Chronic-Dev/libplist) or [libfdk-aac](https://github.com/mstorsjo/fdk-aac). You will need to compile these from source.
+
 ```
 ./autogen.sh
 ./configure
