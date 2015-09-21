@@ -60,11 +60,17 @@ netutils_init_socket(unsigned short *port, int use_ipv6, int use_udp)
 	socklen_t socklen;
 	int server_fd;
 	int ret;
+	int reuseaddr = 1;
 
 	assert(port);
 
 	server_fd = socket(family, type, proto);
 	if (server_fd == -1) {
+		goto cleanup;
+	}
+
+	ret = setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &reuseaddr, sizeof (reuseaddr));
+	if (ret == -1) {
 		goto cleanup;
 	}
 
