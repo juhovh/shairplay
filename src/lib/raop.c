@@ -133,6 +133,9 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 	const char *challenge;
 	int require_auth = 0;
 
+	char *response_data = NULL;
+	int response_datalen = 0;
+
 	method = http_request_get_method(request);
 	cseq = http_request_get_header(request, "CSeq");
 	if (!method || !cseq) {
@@ -309,6 +312,44 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 		logger_log(conn->raop->logger, LOGGER_INFO, "Responding with %s", buffer);
 		http_response_add_header(res, "Transport", buffer);
 		http_response_add_header(res, "Session", "DEADBEEF");
+	} else if (!strcmp(method, "GET_PARAMETER")) {
+		const char *content_type;
+		const char *data;
+		int datalen;
+
+		content_type = http_request_get_header(request, "Content-Type");
+		data = http_request_get_data(request, &datalen);
+		if (!strcmp(content_type, "text/parameters")) {
+			const char *current = data;
+
+			while (current) {
+				const char *next;
+				int handled = 0;
+
+				/* This is a bit ugly, but seems to be how airport works too */
+				if (!strncmp(current, "volume\r\n", 8)) {
+					const char volume[] = "volume: 0.000000\r\n";
+
+					http_response_add_header(res, "Content-Type", "text/parameters");
+					response_data = strdup(volume);
+					if (response_data) {
+						response_datalen = strlen(response_data);
+					}
+					handled = 1;
+				}
+
+				next = strstr(current, "\r\n");
+				if (next && !handled) {
+					logger_log(conn->raop->logger, LOGGER_WARNING,
+					           "Found an unknown parameter: %.*s", (next - current), current);
+					current = next + 2;
+				} else if (next) {
+					current = next + 2;
+				} else {
+					current = NULL;
+				}
+			}
+		}
 	} else if (!strcmp(method, "SET_PARAMETER")) {
 		const char *content_type;
 		const char *data;
@@ -374,7 +415,12 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 			conn->raop_rtp = NULL;
 		}
 	}
-	http_response_finish(res, NULL, 0);
+	http_response_finish(res, response_data, response_datalen);
+	if (response_data) {
+		free(response_data);
+		response_data = NULL;
+		response_datalen = 0;
+	}
 
 	logger_log(conn->raop->logger, LOGGER_DEBUG, "Handled request %s with URL %s", method, http_request_get_url(request));
 	*response = res;
