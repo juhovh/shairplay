@@ -6,7 +6,7 @@
 *.DS_Store
 *.swp
 
-## Xcode
+# Xcode
 build/
 DerivedData
 *.pbxuser
@@ -22,6 +22,9 @@ xcuserdata
 *.moved-aside
 *.xcuserstate
 *.xcscmblueprint
+
+# Xcode - generated configuration files
+shairplay.xcconfig
 
 # autotools
 Makefile
