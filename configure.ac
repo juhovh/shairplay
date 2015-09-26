@@ -82,3 +82,10 @@ AC_CONFIG_FILES(
 	[src/lib/crypto/Makefile]
 )
 AC_OUTPUT
+
+# XCode
+# Provides XCode with libao audio library: creates shairplay.xcconfig, then adds libao build flags
+cat > $ac_abs_confdir/shairplay.xcconfig << EOL
+XCODE_OTHER_LDFLAGS=\$(inherited) $libao_LIBS $LIBS
+XCODE_OTHER_CFLAGS=\$(inherited) $libao_CFLAGS
+EOL
