@@ -70,14 +70,13 @@ AM_CONDITIONAL([OS_FREEBSD],[test "$os_freebsd" = "yes"])
 # Custom check for libao
 PKG_CHECK_MODULES([libao], [ao >= 1.1.0], [have_libao=1], [have_libao=0])
 AM_CONDITIONAL([HAVE_LIBAO], [test "$have_libao" -eq 1])
-if test "$have_libao" -eq 0; then
-  AC_MSG_NOTICE([
-    LIBAO audio library found: Building shairplay binary and libshairplay library.])
-else
-  AC_MSG_WARN([
+AM_COND_IF(HAVE_LIBAO,
+  [AC_MSG_NOTICE([
+    LIBAO audio library found: Building shairplay binary and libshairplay library.])],
+  [AC_MSG_WARN([
     LIBAO audio library not found: Building shairplay library only.
-    To install LIBAO, please refer to the "Dependencies" section in README.md.])
-fi
+    To install LIBAO, please refer to the "Dependencies" section in README.md.])]
+)
 
 AC_CONFIG_FILES(
 	[Makefile]
