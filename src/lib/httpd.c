@@ -388,6 +388,8 @@ httpd_start(httpd_t *httpd, unsigned short *port)
 		logger_log(httpd->logger, LOGGER_WARNING, "Error initialising IPv6 socket %d", SOCKET_GET_ERROR());
 		logger_log(httpd->logger, LOGGER_WARNING, "Continuing without IPv6 support");
 	}
+#else
+	httpd->server_fd6 = -1;
 #endif
 
 	if (httpd->server_fd4 != -1 && listen(httpd->server_fd4, backlog) == -1) {
