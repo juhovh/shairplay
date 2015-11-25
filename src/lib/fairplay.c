@@ -48,7 +48,7 @@ static int get_fairplay_socket()
 
 static void close_fairplay_socket()
 {
-	if (fairplay_sock_fd > 0) close(fairplay_sock_fd);
+	if (fairplay_sock_fd > 0) closesocket(fairplay_sock_fd);
 	fairplay_sock_fd = 0;
 }
 
