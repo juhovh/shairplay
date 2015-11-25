@@ -3,7 +3,11 @@ Shairplay
 Free portable AirPlay server implementation similar to [ShairPort](https://github.com/abrasive/shairport).
 
 Currently only AirPort Express emulation is supported.
-
+Update by foxsen, 2015/11/25:
+  * small fixes for AAC-ELD/ipv6 handling etc. Thanks to HaoLi for pointing them out
+  * I have figured out the different handling of iso9 and will update the code when having more time.
+  * I am also learned most of the necessary information for the video mirroring part, but don't have enough time and interest to implement all the details and maintain them. If some guys would like to implement a fully open source shairplay that can handle both audio and video, I would like to help. Instead of the protocol implementation, I am interested more on the fairplay part and will try to get the hidden private key at spare time. I think I am close to that.
+  
 Update by foxsen, 2015/4/20: 
 Experimental support for fairplay protocol and airplay:
   * fairplay encrypted audio is supported (et == 3)
