@@ -15,10 +15,14 @@
 /*          next n lines is libfdk-aac config                 */
 /* ---------------------------------------------------------- */
  
+/* period size 480 samples */  
+#define N_SAMPLE 480  
 /* ASC config binary data */
 unsigned char eld_conf[] = { 0xF8, 0xE8, 0x50, 0x00 };
 unsigned char *conf[] = { eld_conf };                   //TODO just for aac eld config
 static unsigned int conf_len = sizeof(eld_conf);
+
+static int pcm_pkt_size = 4 * N_SAMPLE;
 
 struct aac_eld_file {
 	int fdk_flags;
@@ -86,13 +90,13 @@ void aac_eld_decode_frame(aac_eld_file *aac_eld, unsigned char *inbuffer, int in
     int ret = 0;
     unsigned char *input_buf[1];
     int sizes[1];
-    int outputsizes[1];
+    int valid_size;
 
     input_buf[0] = inbuffer;
     sizes[0] = inputsize;
  
     /* step 1 -> fill aac_data_buf to decoder's internal buf */
-    ret = aacDecoder_Fill(aac_eld->phandle, input_buf, sizes, outputsize);
+    ret = aacDecoder_Fill(aac_eld->phandle, input_buf, sizes, &valid_size);
     if (ret != AAC_DEC_OK) {
         fprintf(stderr, "Fill failed: %x\n", ret);
         *outputsize  = 0;
@@ -100,13 +104,16 @@ void aac_eld_decode_frame(aac_eld_file *aac_eld, unsigned char *inbuffer, int in
     }
  
     /* step 2 -> call decoder function */
-    ret = aacDecoder_DecodeFrame(aac_eld->phandle, outbuffer, *outputsize, aac_eld->fdk_flags);
+    ret = aacDecoder_DecodeFrame(aac_eld->phandle, outbuffer, pcm_pkt_size, aac_eld->fdk_flags);
     if (ret != AAC_DEC_OK) {
         fprintf(stderr, "aacDecoder_DecodeFrame : 0x%x\n", ret);
         *outputsize  = 0;
         return;
     }
 
+    *outputsize = pcm_pkt_size;
+
+    /* TOCHECK: need to check and handle inputsize != valid_size ? */
     fprintf(stderr, "pcm output %d\n", *outputsize);
 }
  
