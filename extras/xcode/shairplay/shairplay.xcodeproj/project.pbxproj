@@ -1,0 +1,713 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		C0BA16DB1BB6380D002CB611 /* libshairplay.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C0BA16D71BB636AF002CB611 /* libshairplay.a */; };
+		C0BA16DC1BB63840002CB611 /* libalac.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C08204771BB5049E00BE01A8 /* libalac.a */; };
+		C0BA16DD1BB63843002CB611 /* libcrypto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C00D2DEB1BB50952005207FC /* libcrypto.a */; };
+		C0BA16E41BB6391D002CB611 /* dnssd.h in Headers */ = {isa = PBXBuildFile; fileRef = C0FD8C3F1BB19ADE0041287E /* dnssd.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		C0BA16E51BB6391D002CB611 /* raop.h in Headers */ = {isa = PBXBuildFile; fileRef = C0FD8C401BB19ADE0041287E /* raop.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		C0BA16E61BB6391D002CB611 /* base64.h in Headers */ = {isa = PBXBuildFile; fileRef = C082041A1BB5048300BE01A8 /* base64.h */; };
+		C0BA16E71BB6391D002CB611 /* compat.h in Headers */ = {isa = PBXBuildFile; fileRef = C082041B1BB5048300BE01A8 /* compat.h */; };
+		C0BA16E81BB6391D002CB611 /* digest.h in Headers */ = {isa = PBXBuildFile; fileRef = C082041C1BB5048300BE01A8 /* digest.h */; };
+		C0BA16E91BB6391D002CB611 /* dnssdint.h in Headers */ = {isa = PBXBuildFile; fileRef = C082041D1BB5048300BE01A8 /* dnssdint.h */; };
+		C0BA16EA1BB6391D002CB611 /* global.h in Headers */ = {isa = PBXBuildFile; fileRef = C082041E1BB5048300BE01A8 /* global.h */; };
+		C0BA16EB1BB6391D002CB611 /* http_parser.h in Headers */ = {isa = PBXBuildFile; fileRef = C082041F1BB5048300BE01A8 /* http_parser.h */; };
+		C0BA16EC1BB6391D002CB611 /* http_request.h in Headers */ = {isa = PBXBuildFile; fileRef = C08204201BB5048300BE01A8 /* http_request.h */; };
+		C0BA16ED1BB6391D002CB611 /* http_response.h in Headers */ = {isa = PBXBuildFile; fileRef = C08204211BB5048300BE01A8 /* http_response.h */; };
+		C0BA16EE1BB6391D002CB611 /* httpd.h in Headers */ = {isa = PBXBuildFile; fileRef = C08204221BB5048300BE01A8 /* httpd.h */; };
+		C0BA16EF1BB6391E002CB611 /* logger.h in Headers */ = {isa = PBXBuildFile; fileRef = C08204231BB5048300BE01A8 /* logger.h */; };
+		C0BA16F01BB6391E002CB611 /* memalign.h in Headers */ = {isa = PBXBuildFile; fileRef = C08204241BB5048300BE01A8 /* memalign.h */; };
+		C0BA16F11BB6391E002CB611 /* netutils.h in Headers */ = {isa = PBXBuildFile; fileRef = C08204251BB5048300BE01A8 /* netutils.h */; };
+		C0BA16F21BB6391E002CB611 /* raop_buffer.h in Headers */ = {isa = PBXBuildFile; fileRef = C08204261BB5048300BE01A8 /* raop_buffer.h */; };
+		C0BA16F31BB6391E002CB611 /* raop_rtp.h in Headers */ = {isa = PBXBuildFile; fileRef = C08204271BB5048300BE01A8 /* raop_rtp.h */; };
+		C0BA16F41BB6391E002CB611 /* rsakey.h in Headers */ = {isa = PBXBuildFile; fileRef = C08204281BB5048300BE01A8 /* rsakey.h */; };
+		C0BA16F51BB6391E002CB611 /* rsapem.h in Headers */ = {isa = PBXBuildFile; fileRef = C08204291BB5048300BE01A8 /* rsapem.h */; };
+		C0BA16F61BB6391E002CB611 /* sdp.h in Headers */ = {isa = PBXBuildFile; fileRef = C082042A1BB5048300BE01A8 /* sdp.h */; };
+		C0BA16F71BB6391E002CB611 /* sockets.h in Headers */ = {isa = PBXBuildFile; fileRef = C082042B1BB5048300BE01A8 /* sockets.h */; };
+		C0BA16F81BB6391E002CB611 /* threads.h in Headers */ = {isa = PBXBuildFile; fileRef = C082042C1BB5048300BE01A8 /* threads.h */; };
+		C0BA16F91BB6391E002CB611 /* utils.h in Headers */ = {isa = PBXBuildFile; fileRef = C082042D1BB5048300BE01A8 /* utils.h */; };
+		C0BA16FA1BB6391E002CB611 /* config.h in Headers */ = {isa = PBXBuildFile; fileRef = C0FD8C441BB19EF10041287E /* config.h */; };
+		C0BA16FB1BB63A41002CB611 /* base64.c in Sources */ = {isa = PBXBuildFile; fileRef = C082042E1BB5048300BE01A8 /* base64.c */; };
+		C0BA16FC1BB63A41002CB611 /* digest.c in Sources */ = {isa = PBXBuildFile; fileRef = C082042F1BB5048300BE01A8 /* digest.c */; };
+		C0BA16FD1BB63A41002CB611 /* dnssd.c in Sources */ = {isa = PBXBuildFile; fileRef = C08204301BB5048300BE01A8 /* dnssd.c */; };
+		C0BA16FE1BB63A41002CB611 /* http_parser.c in Sources */ = {isa = PBXBuildFile; fileRef = C08204311BB5048300BE01A8 /* http_parser.c */; };
+		C0BA16FF1BB63A41002CB611 /* http_request.c in Sources */ = {isa = PBXBuildFile; fileRef = C08204321BB5048300BE01A8 /* http_request.c */; };
+		C0BA17001BB63A41002CB611 /* http_response.c in Sources */ = {isa = PBXBuildFile; fileRef = C08204331BB5048300BE01A8 /* http_response.c */; };
+		C0BA17011BB63A41002CB611 /* httpd.c in Sources */ = {isa = PBXBuildFile; fileRef = C08204341BB5048300BE01A8 /* httpd.c */; };
+		C0BA17021BB63A41002CB611 /* logger.c in Sources */ = {isa = PBXBuildFile; fileRef = C08204351BB5048300BE01A8 /* logger.c */; };
+		C0BA17031BB63A41002CB611 /* netutils.c in Sources */ = {isa = PBXBuildFile; fileRef = C08204361BB5048300BE01A8 /* netutils.c */; };
+		C0BA17041BB63A41002CB611 /* raop_buffer.c in Sources */ = {isa = PBXBuildFile; fileRef = C08204371BB5048300BE01A8 /* raop_buffer.c */; };
+		C0BA17051BB63A41002CB611 /* raop_rtp.c in Sources */ = {isa = PBXBuildFile; fileRef = C08204381BB5048300BE01A8 /* raop_rtp.c */; };
+		C0BA17061BB63A41002CB611 /* raop.c in Sources */ = {isa = PBXBuildFile; fileRef = C08204391BB5048300BE01A8 /* raop.c */; };
+		C0BA17071BB63A41002CB611 /* rsakey.c in Sources */ = {isa = PBXBuildFile; fileRef = C082043A1BB5048300BE01A8 /* rsakey.c */; };
+		C0BA17081BB63A41002CB611 /* rsapem.c in Sources */ = {isa = PBXBuildFile; fileRef = C082043B1BB5048300BE01A8 /* rsapem.c */; };
+		C0BA17091BB63A41002CB611 /* sdp.c in Sources */ = {isa = PBXBuildFile; fileRef = C082043C1BB5048300BE01A8 /* sdp.c */; };
+		C0BA170A1BB63A41002CB611 /* utils.c in Sources */ = {isa = PBXBuildFile; fileRef = C082043D1BB5048300BE01A8 /* utils.c */; };
+		C0CFC1C81BB1679B0022D11B /* airport.key in CopyFiles */ = {isa = PBXBuildFile; fileRef = C0CFC1C61BB167930022D11B /* airport.key */; };
+		C0FD8C3D1BB199DB0041287E /* shairplay.c in Sources */ = {isa = PBXBuildFile; fileRef = C0FD8C3C1BB199DB0041287E /* shairplay.c */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXBuildRule section */
+		C0CFC1C91BB18D9A0022D11B /* PBXBuildRule */ = {
+			isa = PBXBuildRule;
+			compilerSpec = com.apple.compilers.proxy.script;
+			fileType = pattern.proxy;
+			isEditable = 1;
+			outputFiles = (
+			);
+			script = "";
+		};
+/* End PBXBuildRule section */
+
+/* Begin PBXContainerItemProxy section */
+		C00D2DEA1BB50952005207FC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C00D2DE61BB50952005207FC /* crypto.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = C082040B1BB4FECB00BE01A8;
+			remoteInfo = crypto;
+		};
+		C08204761BB5049E00BE01A8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C08204721BB5049E00BE01A8 /* alac.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = C082040B1BB4FECB00BE01A8;
+			remoteInfo = alac;
+		};
+		C0BA16DE1BB6384E002CB611 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C00D2DE61BB50952005207FC /* crypto.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = C082040A1BB4FECB00BE01A8;
+			remoteInfo = crypto;
+		};
+		C0BA16E01BB63850002CB611 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C08204721BB5049E00BE01A8 /* alac.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = C00D2DD71BB5089C005207FC;
+			remoteInfo = alac;
+		};
+		C0BA16E21BB63862002CB611 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C0C769AC1BB0890A0085138B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C0BA16D61BB636AF002CB611;
+			remoteInfo = "shairplay-library";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		C0C769B41BB0899B0085138B /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 12;
+			dstPath = "";
+			dstSubfolderSpec = 6;
+			files = (
+				C0CFC1C81BB1679B0022D11B /* airport.key in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		C00D2DE61BB50952005207FC /* crypto.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = crypto.xcodeproj; path = ../crypto/crypto.xcodeproj; sourceTree = "<group>"; };
+		C00D2DF51BB50B59005207FC /* shairplay.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = shairplay.xcconfig; path = ../../../shairplay.xcconfig; sourceTree = "<group>"; };
+		C082041A1BB5048300BE01A8 /* base64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = base64.h; path = ../../../src/lib/base64.h; sourceTree = "<group>"; };
+		C082041B1BB5048300BE01A8 /* compat.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = compat.h; path = ../../../src/lib/compat.h; sourceTree = "<group>"; };
+		C082041C1BB5048300BE01A8 /* digest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = digest.h; path = ../../../src/lib/digest.h; sourceTree = "<group>"; };
+		C082041D1BB5048300BE01A8 /* dnssdint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = dnssdint.h; path = ../../../src/lib/dnssdint.h; sourceTree = "<group>"; };
+		C082041E1BB5048300BE01A8 /* global.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = global.h; path = ../../../src/lib/global.h; sourceTree = "<group>"; };
+		C082041F1BB5048300BE01A8 /* http_parser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = http_parser.h; path = ../../../src/lib/http_parser.h; sourceTree = "<group>"; };
+		C08204201BB5048300BE01A8 /* http_request.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = http_request.h; path = ../../../src/lib/http_request.h; sourceTree = "<group>"; };
+		C08204211BB5048300BE01A8 /* http_response.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = http_response.h; path = ../../../src/lib/http_response.h; sourceTree = "<group>"; };
+		C08204221BB5048300BE01A8 /* httpd.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = httpd.h; path = ../../../src/lib/httpd.h; sourceTree = "<group>"; };
+		C08204231BB5048300BE01A8 /* logger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = logger.h; path = ../../../src/lib/logger.h; sourceTree = "<group>"; };
+		C08204241BB5048300BE01A8 /* memalign.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = memalign.h; path = ../../../src/lib/memalign.h; sourceTree = "<group>"; };
+		C08204251BB5048300BE01A8 /* netutils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = netutils.h; path = ../../../src/lib/netutils.h; sourceTree = "<group>"; };
+		C08204261BB5048300BE01A8 /* raop_buffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = raop_buffer.h; path = ../../../src/lib/raop_buffer.h; sourceTree = "<group>"; };
+		C08204271BB5048300BE01A8 /* raop_rtp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = raop_rtp.h; path = ../../../src/lib/raop_rtp.h; sourceTree = "<group>"; };
+		C08204281BB5048300BE01A8 /* rsakey.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = rsakey.h; path = ../../../src/lib/rsakey.h; sourceTree = "<group>"; };
+		C08204291BB5048300BE01A8 /* rsapem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = rsapem.h; path = ../../../src/lib/rsapem.h; sourceTree = "<group>"; };
+		C082042A1BB5048300BE01A8 /* sdp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sdp.h; path = ../../../src/lib/sdp.h; sourceTree = "<group>"; };
+		C082042B1BB5048300BE01A8 /* sockets.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sockets.h; path = ../../../src/lib/sockets.h; sourceTree = "<group>"; };
+		C082042C1BB5048300BE01A8 /* threads.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = threads.h; path = ../../../src/lib/threads.h; sourceTree = "<group>"; };
+		C082042D1BB5048300BE01A8 /* utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = utils.h; path = ../../../src/lib/utils.h; sourceTree = "<group>"; };
+		C082042E1BB5048300BE01A8 /* base64.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = base64.c; path = ../../../src/lib/base64.c; sourceTree = "<group>"; };
+		C082042F1BB5048300BE01A8 /* digest.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = digest.c; path = ../../../src/lib/digest.c; sourceTree = "<group>"; };
+		C08204301BB5048300BE01A8 /* dnssd.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = dnssd.c; path = ../../../src/lib/dnssd.c; sourceTree = "<group>"; };
+		C08204311BB5048300BE01A8 /* http_parser.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = http_parser.c; path = ../../../src/lib/http_parser.c; sourceTree = "<group>"; };
+		C08204321BB5048300BE01A8 /* http_request.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = http_request.c; path = ../../../src/lib/http_request.c; sourceTree = "<group>"; };
+		C08204331BB5048300BE01A8 /* http_response.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = http_response.c; path = ../../../src/lib/http_response.c; sourceTree = "<group>"; };
+		C08204341BB5048300BE01A8 /* httpd.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = httpd.c; path = ../../../src/lib/httpd.c; sourceTree = "<group>"; };
+		C08204351BB5048300BE01A8 /* logger.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = logger.c; path = ../../../src/lib/logger.c; sourceTree = "<group>"; };
+		C08204361BB5048300BE01A8 /* netutils.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = netutils.c; path = ../../../src/lib/netutils.c; sourceTree = "<group>"; };
+		C08204371BB5048300BE01A8 /* raop_buffer.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = raop_buffer.c; path = ../../../src/lib/raop_buffer.c; sourceTree = "<group>"; };
+		C08204381BB5048300BE01A8 /* raop_rtp.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = raop_rtp.c; path = ../../../src/lib/raop_rtp.c; sourceTree = "<group>"; };
+		C08204391BB5048300BE01A8 /* raop.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = raop.c; path = ../../../src/lib/raop.c; sourceTree = "<group>"; };
+		C082043A1BB5048300BE01A8 /* rsakey.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = rsakey.c; path = ../../../src/lib/rsakey.c; sourceTree = "<group>"; };
+		C082043B1BB5048300BE01A8 /* rsapem.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = rsapem.c; path = ../../../src/lib/rsapem.c; sourceTree = "<group>"; };
+		C082043C1BB5048300BE01A8 /* sdp.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sdp.c; path = ../../../src/lib/sdp.c; sourceTree = "<group>"; };
+		C082043D1BB5048300BE01A8 /* utils.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = utils.c; path = ../../../src/lib/utils.c; sourceTree = "<group>"; };
+		C08204721BB5049E00BE01A8 /* alac.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = alac.xcodeproj; path = ../alac/alac.xcodeproj; sourceTree = "<group>"; };
+		C0BA16D71BB636AF002CB611 /* libshairplay.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libshairplay.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		C0C769B61BB0899B0085138B /* shairplay */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = shairplay; sourceTree = BUILT_PRODUCTS_DIR; };
+		C0CFC1C61BB167930022D11B /* airport.key */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = airport.key; path = ../../../airport.key; sourceTree = SOURCE_ROOT; };
+		C0FD8C3C1BB199DB0041287E /* shairplay.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = shairplay.c; path = ../../../src/shairplay.c; sourceTree = "<group>"; };
+		C0FD8C3F1BB19ADE0041287E /* dnssd.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = dnssd.h; path = ../../../include/shairplay/dnssd.h; sourceTree = "<group>"; };
+		C0FD8C401BB19ADE0041287E /* raop.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = raop.h; path = ../../../include/shairplay/raop.h; sourceTree = "<group>"; };
+		C0FD8C441BB19EF10041287E /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = config.h; path = ../../../config.h; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		C0BA16D41BB636AF002CB611 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C0BA16DD1BB63843002CB611 /* libcrypto.a in Frameworks */,
+				C0BA16DC1BB63840002CB611 /* libalac.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C0C769B31BB0899B0085138B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C0BA16DB1BB6380D002CB611 /* libshairplay.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		C00D2DE71BB50952005207FC /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				C00D2DEB1BB50952005207FC /* libcrypto.a */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		C0581B1E1BB1990200C39F6E /* Other Sources */ = {
+			isa = PBXGroup;
+			children = (
+				C0FD8C441BB19EF10041287E /* config.h */,
+				C082041A1BB5048300BE01A8 /* base64.h */,
+				C082041B1BB5048300BE01A8 /* compat.h */,
+				C082041C1BB5048300BE01A8 /* digest.h */,
+				C082041D1BB5048300BE01A8 /* dnssdint.h */,
+				C082041E1BB5048300BE01A8 /* global.h */,
+				C082041F1BB5048300BE01A8 /* http_parser.h */,
+				C08204201BB5048300BE01A8 /* http_request.h */,
+				C08204211BB5048300BE01A8 /* http_response.h */,
+				C08204221BB5048300BE01A8 /* httpd.h */,
+				C08204231BB5048300BE01A8 /* logger.h */,
+				C08204241BB5048300BE01A8 /* memalign.h */,
+				C08204251BB5048300BE01A8 /* netutils.h */,
+				C08204261BB5048300BE01A8 /* raop_buffer.h */,
+				C08204271BB5048300BE01A8 /* raop_rtp.h */,
+				C08204281BB5048300BE01A8 /* rsakey.h */,
+				C08204291BB5048300BE01A8 /* rsapem.h */,
+				C082042A1BB5048300BE01A8 /* sdp.h */,
+				C082042B1BB5048300BE01A8 /* sockets.h */,
+				C082042C1BB5048300BE01A8 /* threads.h */,
+				C082042D1BB5048300BE01A8 /* utils.h */,
+				C082042E1BB5048300BE01A8 /* base64.c */,
+				C082042F1BB5048300BE01A8 /* digest.c */,
+				C08204301BB5048300BE01A8 /* dnssd.c */,
+				C08204311BB5048300BE01A8 /* http_parser.c */,
+				C08204321BB5048300BE01A8 /* http_request.c */,
+				C08204331BB5048300BE01A8 /* http_response.c */,
+				C08204341BB5048300BE01A8 /* httpd.c */,
+				C08204351BB5048300BE01A8 /* logger.c */,
+				C08204361BB5048300BE01A8 /* netutils.c */,
+				C08204371BB5048300BE01A8 /* raop_buffer.c */,
+				C08204381BB5048300BE01A8 /* raop_rtp.c */,
+				C08204391BB5048300BE01A8 /* raop.c */,
+				C082043A1BB5048300BE01A8 /* rsakey.c */,
+				C082043B1BB5048300BE01A8 /* rsapem.c */,
+				C082043C1BB5048300BE01A8 /* sdp.c */,
+				C082043D1BB5048300BE01A8 /* utils.c */,
+			);
+			name = "Other Sources";
+			sourceTree = "<group>";
+		};
+		C08204731BB5049E00BE01A8 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				C08204771BB5049E00BE01A8 /* libalac.a */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		C08D4F931BB64916000B6CDC /* Library Public Headers */ = {
+			isa = PBXGroup;
+			children = (
+				C0FD8C3F1BB19ADE0041287E /* dnssd.h */,
+				C0FD8C401BB19ADE0041287E /* raop.h */,
+			);
+			name = "Library Public Headers";
+			sourceTree = "<group>";
+		};
+		C08D4F941BB649D9000B6CDC /* Application Source */ = {
+			isa = PBXGroup;
+			children = (
+				C0FD8C3C1BB199DB0041287E /* shairplay.c */,
+			);
+			name = "Application Source";
+			sourceTree = "<group>";
+		};
+		C0BA16CA1BB635AC002CB611 /* External Libraries */ = {
+			isa = PBXGroup;
+			children = (
+				C00D2DE61BB50952005207FC /* crypto.xcodeproj */,
+				C08204721BB5049E00BE01A8 /* alac.xcodeproj */,
+			);
+			name = "External Libraries";
+			sourceTree = "<group>";
+		};
+		C0C769AB1BB0890A0085138B = {
+			isa = PBXGroup;
+			children = (
+				C08D4F941BB649D9000B6CDC /* Application Source */,
+				C08D4F931BB64916000B6CDC /* Library Public Headers */,
+				C0581B1E1BB1990200C39F6E /* Other Sources */,
+				C0BA16CA1BB635AC002CB611 /* External Libraries */,
+				C0FD8C431BB19AFE0041287E /* Resources */,
+				C0C769B71BB0899B0085138B /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		C0C769B71BB0899B0085138B /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				C0C769B61BB0899B0085138B /* shairplay */,
+				C0BA16D71BB636AF002CB611 /* libshairplay.a */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		C0FD8C431BB19AFE0041287E /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				C00D2DF51BB50B59005207FC /* shairplay.xcconfig */,
+				C0CFC1C61BB167930022D11B /* airport.key */,
+			);
+			name = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		C0BA16D51BB636AF002CB611 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C0BA16E41BB6391D002CB611 /* dnssd.h in Headers */,
+				C0BA16E51BB6391D002CB611 /* raop.h in Headers */,
+				C0BA16E61BB6391D002CB611 /* base64.h in Headers */,
+				C0BA16E71BB6391D002CB611 /* compat.h in Headers */,
+				C0BA16E81BB6391D002CB611 /* digest.h in Headers */,
+				C0BA16E91BB6391D002CB611 /* dnssdint.h in Headers */,
+				C0BA16EA1BB6391D002CB611 /* global.h in Headers */,
+				C0BA16EB1BB6391D002CB611 /* http_parser.h in Headers */,
+				C0BA16EC1BB6391D002CB611 /* http_request.h in Headers */,
+				C0BA16ED1BB6391D002CB611 /* http_response.h in Headers */,
+				C0BA16EE1BB6391D002CB611 /* httpd.h in Headers */,
+				C0BA16EF1BB6391E002CB611 /* logger.h in Headers */,
+				C0BA16F01BB6391E002CB611 /* memalign.h in Headers */,
+				C0BA16F11BB6391E002CB611 /* netutils.h in Headers */,
+				C0BA16F21BB6391E002CB611 /* raop_buffer.h in Headers */,
+				C0BA16F31BB6391E002CB611 /* raop_rtp.h in Headers */,
+				C0BA16F41BB6391E002CB611 /* rsakey.h in Headers */,
+				C0BA16F51BB6391E002CB611 /* rsapem.h in Headers */,
+				C0BA16F61BB6391E002CB611 /* sdp.h in Headers */,
+				C0BA16F71BB6391E002CB611 /* sockets.h in Headers */,
+				C0BA16F81BB6391E002CB611 /* threads.h in Headers */,
+				C0BA16F91BB6391E002CB611 /* utils.h in Headers */,
+				C0BA16FA1BB6391E002CB611 /* config.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		C0BA16D61BB636AF002CB611 /* shairplay-library */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C0BA16D81BB636AF002CB611 /* Build configuration list for PBXNativeTarget "shairplay-library" */;
+			buildPhases = (
+				C0BA16D31BB636AF002CB611 /* Sources */,
+				C0BA16D41BB636AF002CB611 /* Frameworks */,
+				C0BA16D51BB636AF002CB611 /* Headers */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C0BA16E11BB63850002CB611 /* PBXTargetDependency */,
+				C0BA16DF1BB6384E002CB611 /* PBXTargetDependency */,
+			);
+			name = "shairplay-library";
+			productName = "shairplay-library";
+			productReference = C0BA16D71BB636AF002CB611 /* libshairplay.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+		C0C769B51BB0899B0085138B /* shairplay-application */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C0C769BB1BB0899B0085138B /* Build configuration list for PBXNativeTarget "shairplay-application" */;
+			buildPhases = (
+				C0C769B21BB0899B0085138B /* Sources */,
+				C0C769B31BB0899B0085138B /* Frameworks */,
+				C0C769B41BB0899B0085138B /* CopyFiles */,
+			);
+			buildRules = (
+				C0CFC1C91BB18D9A0022D11B /* PBXBuildRule */,
+			);
+			dependencies = (
+				C0BA16E31BB63862002CB611 /* PBXTargetDependency */,
+			);
+			name = "shairplay-application";
+			productName = shairplay;
+			productReference = C0C769B61BB0899B0085138B /* shairplay */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		C0C769AC1BB0890A0085138B /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0710;
+				TargetAttributes = {
+					C0BA16D61BB636AF002CB611 = {
+						CreatedOnToolsVersion = 7.1;
+					};
+					C0C769B51BB0899B0085138B = {
+						CreatedOnToolsVersion = 7.1;
+					};
+				};
+			};
+			buildConfigurationList = C0C769AF1BB0890A0085138B /* Build configuration list for PBXProject "shairplay" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = C0C769AB1BB0890A0085138B;
+			productRefGroup = C0C769B71BB0899B0085138B /* Products */;
+			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = C08204731BB5049E00BE01A8 /* Products */;
+					ProjectRef = C08204721BB5049E00BE01A8 /* alac.xcodeproj */;
+				},
+				{
+					ProductGroup = C00D2DE71BB50952005207FC /* Products */;
+					ProjectRef = C00D2DE61BB50952005207FC /* crypto.xcodeproj */;
+				},
+			);
+			projectRoot = "";
+			targets = (
+				C0BA16D61BB636AF002CB611 /* shairplay-library */,
+				C0C769B51BB0899B0085138B /* shairplay-application */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXReferenceProxy section */
+		C00D2DEB1BB50952005207FC /* libcrypto.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = libcrypto.a;
+			remoteRef = C00D2DEA1BB50952005207FC /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		C08204771BB5049E00BE01A8 /* libalac.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = libalac.a;
+			remoteRef = C08204761BB5049E00BE01A8 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+/* End PBXReferenceProxy section */
+
+/* Begin PBXSourcesBuildPhase section */
+		C0BA16D31BB636AF002CB611 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C0BA16FB1BB63A41002CB611 /* base64.c in Sources */,
+				C0BA16FC1BB63A41002CB611 /* digest.c in Sources */,
+				C0BA16FD1BB63A41002CB611 /* dnssd.c in Sources */,
+				C0BA16FE1BB63A41002CB611 /* http_parser.c in Sources */,
+				C0BA16FF1BB63A41002CB611 /* http_request.c in Sources */,
+				C0BA17001BB63A41002CB611 /* http_response.c in Sources */,
+				C0BA17011BB63A41002CB611 /* httpd.c in Sources */,
+				C0BA17021BB63A41002CB611 /* logger.c in Sources */,
+				C0BA17031BB63A41002CB611 /* netutils.c in Sources */,
+				C0BA17041BB63A41002CB611 /* raop_buffer.c in Sources */,
+				C0BA17051BB63A41002CB611 /* raop_rtp.c in Sources */,
+				C0BA17061BB63A41002CB611 /* raop.c in Sources */,
+				C0BA17071BB63A41002CB611 /* rsakey.c in Sources */,
+				C0BA17081BB63A41002CB611 /* rsapem.c in Sources */,
+				C0BA17091BB63A41002CB611 /* sdp.c in Sources */,
+				C0BA170A1BB63A41002CB611 /* utils.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C0C769B21BB0899B0085138B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C0FD8C3D1BB199DB0041287E /* shairplay.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		C0BA16DF1BB6384E002CB611 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = crypto;
+			targetProxy = C0BA16DE1BB6384E002CB611 /* PBXContainerItemProxy */;
+		};
+		C0BA16E11BB63850002CB611 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = alac;
+			targetProxy = C0BA16E01BB63850002CB611 /* PBXContainerItemProxy */;
+		};
+		C0BA16E31BB63862002CB611 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C0BA16D61BB636AF002CB611 /* shairplay-library */;
+			targetProxy = C0BA16E21BB63862002CB611 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		C0BA16D91BB636AF002CB611 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				EXECUTABLE_PREFIX = lib;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				PRIVATE_HEADERS_FOLDER_PATH = "$(PUBLIC_HEADERS_FOLDER_PATH)/Private";
+				PRODUCT_NAME = shairplay;
+				PUBLIC_HEADERS_FOLDER_PATH = "include/$(PRODUCT_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+			};
+			name = Debug;
+		};
+		C0BA16DA1BB636AF002CB611 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				EXECUTABLE_PREFIX = lib;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				PRIVATE_HEADERS_FOLDER_PATH = "$(PUBLIC_HEADERS_FOLDER_PATH)/Private";
+				PRODUCT_NAME = shairplay;
+				PUBLIC_HEADERS_FOLDER_PATH = "include/$(PRODUCT_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
+		C0C769B01BB0890A0085138B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CONFIGURATION_BUILD_DIR = "$(BUILD_DIR)";
+				ENABLE_TESTABILITY = YES;
+				GCC_INCREASE_PRECOMPILED_HEADER_SHARING = NO;
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				ONLY_ACTIVE_ARCH = YES;
+			};
+			name = Debug;
+		};
+		C0C769B11BB0890A0085138B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CONFIGURATION_BUILD_DIR = "$(BUILD_DIR)";
+				GCC_INCREASE_PRECOMPILED_HEADER_SHARING = NO;
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+			};
+			name = Release;
+		};
+		C0C769BC1BB0899B0085138B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = C00D2DF51BB50B59005207FC /* shairplay.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				OTHER_CFLAGS = "$(XCODE_OTHER_CFLAGS)";
+				OTHER_LDFLAGS = "$(XCODE_OTHER_LDFLAGS)";
+				PRODUCT_NAME = shairplay;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		C0C769BD1BB0899B0085138B /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = C00D2DF51BB50B59005207FC /* shairplay.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_CFLAGS = "$(XCODE_OTHER_CFLAGS)";
+				OTHER_LDFLAGS = "$(XCODE_OTHER_LDFLAGS)";
+				PRODUCT_NAME = shairplay;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		C0BA16D81BB636AF002CB611 /* Build configuration list for PBXNativeTarget "shairplay-library" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C0BA16D91BB636AF002CB611 /* Debug */,
+				C0BA16DA1BB636AF002CB611 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C0C769AF1BB0890A0085138B /* Build configuration list for PBXProject "shairplay" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C0C769B01BB0890A0085138B /* Debug */,
+				C0C769B11BB0890A0085138B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C0C769BB1BB0899B0085138B /* Build configuration list for PBXNativeTarget "shairplay-application" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C0C769BC1BB0899B0085138B /* Debug */,
+				C0C769BD1BB0899B0085138B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = C0C769AC1BB0890A0085138B /* Project object */;
+}

@@ -70,8 +70,13 @@ AM_CONDITIONAL([OS_FREEBSD],[test "$os_freebsd" = "yes"])
 # Custom check for libao
 PKG_CHECK_MODULES([libao], [ao >= 1.1.0], [have_libao=1], [have_libao=0])
 AM_CONDITIONAL([HAVE_LIBAO], [test "$have_libao" -eq 1])
-
-
+AM_COND_IF(HAVE_LIBAO,
+  [AC_MSG_NOTICE([
+    LIBAO audio library found: Building shairplay binary and libshairplay library.])],
+  [AC_MSG_WARN([
+    LIBAO audio library not found: Building shairplay library only.
+    To install LIBAO, please refer to the "Dependencies" section in README.md.])]
+)
 
 AC_CONFIG_FILES(
 	[Makefile]
@@ -82,3 +87,10 @@ AC_CONFIG_FILES(
 	[src/lib/crypto/Makefile]
 )
 AC_OUTPUT
+
+# XCode
+# Provides XCode with libao audio library: creates shairplay.xcconfig, then adds libao build flags
+cat > $ac_abs_confdir/shairplay.xcconfig << EOL
+XCODE_OTHER_LDFLAGS=\$(inherited) $libao_LIBS $LIBS
+XCODE_OTHER_CFLAGS=\$(inherited) $libao_CFLAGS
+EOL
