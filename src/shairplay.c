@@ -166,8 +166,8 @@ audio_init(void *cls, int bits, int channels, int samplerate)
 	session->device = audio_open_device(options, bits, channels, samplerate);
 	if (session->device == NULL) {
 		printf("Error opening device %d\n", errno);
+		printf("The device might already be in use");
 	}
-	assert(session->device);
 
 	session->buffering = 1;
 	session->volume = 1.0f;
@@ -194,7 +194,9 @@ audio_output(shairplay_session_t *session, const void *buffer, int buflen)
 	for (i=0; i<tmpbuflen/2; i++) {
 		shortbuf[i] = shortbuf[i] * session->volume;
 	}
-	ao_play(session->device, tmpbuf, tmpbuflen);
+	if (session->device) {
+		ao_play(session->device, tmpbuf, tmpbuflen);
+	}
 	return tmpbuflen;
 }
 
@@ -236,7 +238,9 @@ audio_destroy(void *cls, void *opaque)
 {
 	shairplay_session_t *session = opaque;
 
-	ao_close(session->device);
+	if (session->device) {
+		ao_close(session->device);
+	}
 	free(session);
 }
 
