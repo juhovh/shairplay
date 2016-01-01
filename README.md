@@ -44,7 +44,7 @@ Usage: shairplay [OPTION...]
   -p, --password=secret           Sets password
   -o, --server_port=5000          Sets port for RAOP service
       --ao_driver=driver          Sets the ao driver (optional)
-      --hwaddr=address		  Sets the MAC address, useful if running multuple instances
+      --hwaddr=address            Sets the MAC address, useful if running multuple instances
       --ao_devicename=devicename  Sets the ao device name (optional)
       --ao_deviceid=id            Sets the ao device id (optional)
   -h, --help                      This help
