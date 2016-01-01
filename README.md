@@ -44,6 +44,7 @@ Usage: shairplay [OPTION...]
   -p, --password=secret           Sets password
   -o, --server_port=5000          Sets port for RAOP service
       --ao_driver=driver          Sets the ao driver (optional)
+      --hwaddr=address		  Sets the MAC address, useful if running multuple instances
       --ao_devicename=devicename  Sets the ao device name (optional)
       --ao_deviceid=id            Sets the ao device id (optional)
   -h, --help                      This help
@@ -56,6 +57,11 @@ computers in the same network.
 Notice that you need to have the airport.key file in your working directory when
 starting the shairplay service. It is not included in the binary for possible
 legal reasons.
+
+Multiple Instances
+------------------
+
+Shairplay advertises over mDNS in the form 485D607CEE22@Dining Room Speakers where 485D607CEE22 is a MAC address. This is hardcoded to a nonsense value, which is not a problem so long as it's unique. However, if you run multiple Shairplay instances, iOS devices will only recognize one of them. To fix this, supply the --hwaddr option with different values on each device.
 
 Related software
 ----------------
