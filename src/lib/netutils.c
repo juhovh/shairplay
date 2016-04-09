@@ -50,7 +50,7 @@ netutils_cleanup()
 }
 
 int
-netutils_init_socket(unsigned short *port, int use_ipv6, int use_udp)
+netutils_init_socket(unsigned short *port, int use_ipv6, int use_udp, unsigned short dyn_port_min, unsigned short dyn_port_max)
 {
 	int family = use_ipv6 ? AF_INET6 : AF_INET;
 	int type = use_udp ? SOCK_DGRAM : SOCK_STREAM;
@@ -84,6 +84,10 @@ netutils_init_socket(unsigned short *port, int use_ipv6, int use_udp)
 		sin6ptr->sin6_addr = in6addr_any;
 		sin6ptr->sin6_port = htons(*port);
 
+		if(*port == 0 && dyn_port_min) {
+			sin6ptr->sin6_port = htons(dyn_port_min);
+		}
+
 #ifndef WIN32
 		/* Make sure we only listen to IPv6 addresses */
 		setsockopt(server_fd, IPPROTO_IPV6, IPV6_V6ONLY,
@@ -91,8 +95,16 @@ netutils_init_socket(unsigned short *port, int use_ipv6, int use_udp)
 #endif
 
 		socklen = sizeof(*sin6ptr);
-		ret = bind(server_fd, (struct sockaddr *)sin6ptr, socklen);
-		if (ret == -1) {
+		while(1) {
+			ret = bind(server_fd, (struct sockaddr *)sin6ptr, socklen);
+			if(ret == 0)
+				break;
+
+			if(*port == 0 && dyn_port_min && (!dyn_port_max || ntohs(sin6ptr->sin6_port) < dyn_port_max)) {
+				sin6ptr->sin6_port = htons(ntohs(sin6ptr->sin6_port) + 1);
+				continue;
+			}
+
 			goto cleanup;
 		}
 
@@ -109,9 +121,21 @@ netutils_init_socket(unsigned short *port, int use_ipv6, int use_udp)
 		sinptr->sin_addr.s_addr = INADDR_ANY;
 		sinptr->sin_port = htons(*port);
 
+		if(*port == 0 && dyn_port_min) {
+			sinptr->sin_port = htons(dyn_port_min);
+		}
+
 		socklen = sizeof(*sinptr);
-		ret = bind(server_fd, (struct sockaddr *)sinptr, socklen);
-		if (ret == -1) {
+		while(1) {
+			ret = bind(server_fd, (struct sockaddr *)sinptr, socklen);
+			if(ret == 0)
+				break;
+
+			if(*port == 0 && dyn_port_min && (!dyn_port_max || ntohs(sinptr->sin_port) < dyn_port_max)) {
+				sinptr->sin_port = htons(ntohs(sinptr->sin_port) + 1);
+				continue;
+			}
+
 			goto cleanup;
 		}
 

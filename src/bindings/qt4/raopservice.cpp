@@ -206,10 +206,10 @@ bool RaopService::isRunning()
     return (raop_is_running(m_raop) != 0);
 }
 
-bool RaopService::start(quint16 port, const QByteArray & hwaddr)
+bool RaopService::start(quint16 port, const QByteArray & hwaddr, quint16 dyn_min_port, quint16 dyn_max_port)
 {
     int ret;
-    ret = raop_start(m_raop, &port, hwaddr.data(), hwaddr.size(), 0);
+    ret = raop_start(m_raop, &port, dyn_min_port, dyn_max_port, hwaddr.data(), hwaddr.size(), 0);
     if (ret < 0) {
         return false;
     }

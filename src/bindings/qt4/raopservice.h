@@ -40,7 +40,7 @@ public:
     bool init(int max_clients, RaopAudioHandler *callbacks);
     void setLogLevel(int level);
     void setLogHandler(RaopLogHandler *logger);
-    bool start(quint16 port, const QByteArray & hwaddr);
+    bool start(quint16 port, const QByteArray & hwaddr, quint16 dyn_min_port=0, quint16 dyn_max_port=0);
     bool isRunning();
     void stop();
 

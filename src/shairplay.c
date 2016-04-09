@@ -43,6 +43,8 @@ typedef struct {
 	char apname[56];
 	char password[56];
 	unsigned short port;
+	unsigned short dyn_port_min;
+	unsigned short dyn_port_max;
 	char hwaddr[6];
 
 	char ao_driver[56];
@@ -277,6 +279,10 @@ parse_options(shairplay_options_t *opt, int argc, char *argv[])
 			opt->port = atoi(*++argv);
 		} else if (!strncmp(arg, "--server_port=", 14)) {
 			opt->port = atoi(arg+14);
+		} else if (!strncmp(arg, "--dyn_port_min=", 15)) {
+			opt->dyn_port_min = atoi(arg+15);
+		} else if (!strncmp(arg, "--dyn_port_max=", 15)) {
+			opt->dyn_port_max = atoi(arg+15);
 		} else if (!strncmp(arg, "--hwaddr=", 9)) {
 			if (parse_hwaddr(arg+9, opt->hwaddr, sizeof(opt->hwaddr))) {
 				fprintf(stderr, "Invalid format given for hwaddr, aborting...\n");
@@ -296,6 +302,8 @@ parse_options(shairplay_options_t *opt, int argc, char *argv[])
 			fprintf(stderr, "  -a, --apname=AirPort            Sets Airport name\n");
 			fprintf(stderr, "  -p, --password=secret           Sets password\n");
 			fprintf(stderr, "  -o, --server_port=5000          Sets port for RAOP service\n");
+			fprintf(stderr, "      --dyn_port_min=0            Sets lower bound of dynamically allocated port range\n");
+			fprintf(stderr, "      --dyn_port_max=0            Sets upper bound of dynamically allocated port range (must be at least min+3)\n");
 			fprintf(stderr, "      --hwaddr=address            Sets the MAC address, useful if running multiple instances\n");
 			fprintf(stderr, "      --ao_driver=driver          Sets the ao driver (optional)\n");
 			fprintf(stderr, "      --ao_devicename=devicename  Sets the ao device name (optional)\n");
@@ -304,6 +312,20 @@ parse_options(shairplay_options_t *opt, int argc, char *argv[])
 			fprintf(stderr, "\n");
 			return 1;
 		}
+	}
+
+	if(opt->dyn_port_min != 0 && opt->dyn_port_max != 0) {
+		if(opt->dyn_port_min > opt->dyn_port_max)
+			fprintf(stderr, "dyn_port_max must be greater than dyn_port_min\n");
+		else if(opt->dyn_port_max - opt->dyn_port_min < 3)
+			fprintf(stderr, "dyn_port_max must be at least 3 ports above dyn_port_min\n");
+		else
+			return 0;
+
+		return 1;
+	}else if(opt->dyn_port_min == 0 && opt->dyn_port_max != 0) {
+		fprintf(stderr, "dyn_port_max is useless without dyn_port_min\n");
+		return 1;
 	}
 
 	return 0;
@@ -361,7 +383,7 @@ main(int argc, char *argv[])
 		password = options.password;
 	}
 	raop_set_log_level(raop, RAOP_LOG_DEBUG);
-	raop_start(raop, &options.port, options.hwaddr, sizeof(options.hwaddr), password);
+	raop_start(raop, &options.port, options.dyn_port_min, options.dyn_port_max, options.hwaddr, sizeof(options.hwaddr), password);
 
 	error = 0;
 	dnssd = dnssd_init(&error);

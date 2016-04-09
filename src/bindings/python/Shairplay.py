@@ -110,7 +110,7 @@ def InitShairplay(libshairplay):
 	libshairplay.raop_is_running.restype = c_int
 	libshairplay.raop_is_running.argtypes = [c_void_p]
 	libshairplay.raop_start.restype = c_int
-	libshairplay.raop_start.argtypes = [c_void_p, POINTER(c_ushort), POINTER(c_char), c_int, c_char_p]
+	libshairplay.raop_start.argtypes = [c_void_p, POINTER(c_ushort), c_ushort, c_ushort, POINTER(c_char), c_int, c_char_p]
 	libshairplay.raop_stop.restype = None
 	libshairplay.raop_stop.argtypes = [c_void_p]
 	libshairplay.raop_destroy.restype = None
@@ -241,11 +241,11 @@ class RaopService:
 		self.libshairplay.raop_set_log_callback(self.instance, log_callback_ptr, None)
 		self.log_callback = log_callback_ptr
 
-	def start(self, port, hwaddrstr, password=None):
+	def start(self, port, hwaddrstr, password=None, dyn_port_min=0, dyn_port_max=0):
 		port = c_ushort(port)
 		hwaddr = create_string_buffer(hwaddrstr, len(hwaddrstr))
 
-		ret = self.libshairplay.raop_start(self.instance, pointer(port), hwaddr, c_int(len(hwaddr)), password)
+		ret = self.libshairplay.raop_start(self.instance, pointer(port), dyn_port_min, dyn_port_max, hwaddr, c_int(len(hwaddr)), password)
 		if ret < 0:
 			raise RuntimeError("Starting RAOP instance failed")
 		return port.value
