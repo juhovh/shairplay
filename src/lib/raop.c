@@ -54,6 +54,10 @@ struct raop_s {
 	unsigned char hwaddr[MAX_HWADDR_LEN];
 	int hwaddrlen;
 
+	/* Range of dynamic ports to use for control/timing/data */
+	unsigned int dyn_port_min;
+	unsigned int dyn_port_max;
+
 	/* Password information */
 	char password[MAX_PASSWORD_LEN+1];
 };
@@ -293,7 +297,7 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 			free(original);
 		}
 		if (conn->raop_rtp) {
-			raop_rtp_start(conn->raop_rtp, use_udp, remote_cport, remote_tport, &cport, &tport, &dport);
+			raop_rtp_start(conn->raop_rtp, use_udp, remote_cport, remote_tport, raop->dyn_port_min, raop->dyn_port_max, &cport, &tport, &dport);
 		} else {
 			logger_log(conn->raop->logger, LOGGER_ERR, "RAOP not initialized at SETUP, playing will fail!");
 			http_response_set_disconnect(res, 1);
@@ -560,7 +564,8 @@ raop_set_log_callback(raop_t *raop, raop_log_callback_t callback, void *cls)
 }
 
 int
-raop_start(raop_t *raop, unsigned short *port, const char *hwaddr, int hwaddrlen, const char *password)
+raop_start(raop_t *raop, unsigned short *port, unsigned short dyn_port_min,
+		unsigned short dyn_port_max, const char *hwaddr, int hwaddrlen, const char *password)
 {
 	assert(raop);
 	assert(port);
@@ -585,6 +590,9 @@ raop_start(raop_t *raop, unsigned short *port, const char *hwaddr, int hwaddrlen
 	/* Copy hwaddr to the raop structure */
 	memcpy(raop->hwaddr, hwaddr, hwaddrlen);
 	raop->hwaddrlen = hwaddrlen;
+
+	raop->dyn_port_min = dyn_port_min;
+	raop->dyn_port_max = dyn_port_max;
 
 	return httpd_start(raop->httpd, port);
 }

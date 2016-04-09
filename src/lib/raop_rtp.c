@@ -179,7 +179,8 @@ raop_rtp_destroy(raop_rtp_t *raop_rtp)
 }
 
 static int
-raop_rtp_init_sockets(raop_rtp_t *raop_rtp, int use_ipv6, int use_udp)
+raop_rtp_init_sockets(raop_rtp_t *raop_rtp, int use_ipv6, int use_udp,
+      unsigned short dyn_port_min, unsigned short dyn_port_max)
 {
 	int csock = -1, tsock = -1, dsock = -1;
 	unsigned short cport = 0, tport = 0, dport = 0;
@@ -187,13 +188,13 @@ raop_rtp_init_sockets(raop_rtp_t *raop_rtp, int use_ipv6, int use_udp)
 	assert(raop_rtp);
 
 	if (use_udp) {
-		csock = netutils_init_socket(&cport, use_ipv6, use_udp);
-		tsock = netutils_init_socket(&tport, use_ipv6, use_udp);
+		csock = netutils_init_socket(&cport, use_ipv6, use_udp, dyn_port_min, dyn_port_max);
+		tsock = netutils_init_socket(&tport, use_ipv6, use_udp, dyn_port_min, dyn_port_max);
 		if (csock == -1 || tsock == -1) {
 			goto sockets_cleanup;
 		}
 	}
-	dsock = netutils_init_socket(&dport, use_ipv6, use_udp);
+	dsock = netutils_init_socket(&dport, use_ipv6, use_udp, dyn_port_min, dyn_port_max);
 	if (dsock == -1) {
 		goto sockets_cleanup;
 	}
@@ -601,6 +602,7 @@ raop_rtp_thread_tcp(void *arg)
 
 void
 raop_rtp_start(raop_rtp_t *raop_rtp, int use_udp, unsigned short control_rport, unsigned short timing_rport,
+               unsigned short dyn_port_min, unsigned short dyn_port_max,
                unsigned short *control_lport, unsigned short *timing_lport, unsigned short *data_lport)
 {
 	int use_ipv6 = 0;
@@ -619,7 +621,7 @@ raop_rtp_start(raop_rtp_t *raop_rtp, int use_udp, unsigned short control_rport, 
 	if (raop_rtp->remote_saddr.ss_family == AF_INET6) {
 		use_ipv6 = 1;
 	}
-	if (raop_rtp_init_sockets(raop_rtp, use_ipv6, use_udp) < 0) {
+	if (raop_rtp_init_sockets(raop_rtp, use_ipv6, use_udp, dyn_port_min, dyn_port_max) < 0) {
 		logger_log(raop_rtp->logger, LOGGER_INFO, "Initializing sockets failed");
 		MUTEX_UNLOCK(raop_rtp->run_mutex);
 		return;

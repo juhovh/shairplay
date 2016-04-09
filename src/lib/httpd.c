@@ -368,13 +368,13 @@ httpd_start(httpd_t *httpd, unsigned short *port)
 		return 0;
 	}
 
-	httpd->server_fd4 = netutils_init_socket(port, 0, 0);
+	httpd->server_fd4 = netutils_init_socket(port, 0, 0, 0, 0);
 	if (httpd->server_fd4 == -1) {
 		logger_log(httpd->logger, LOGGER_ERR, "Error initialising socket %d", SOCKET_GET_ERROR());
 		MUTEX_UNLOCK(httpd->run_mutex);
 		return -1;
 	}
-	httpd->server_fd6 = netutils_init_socket(port, 1, 0);
+	httpd->server_fd6 = netutils_init_socket(port, 1, 0, 0, 0);
 	if (httpd->server_fd6 == -1) {
 		logger_log(httpd->logger, LOGGER_WARNING, "Error initialising IPv6 socket %d", SOCKET_GET_ERROR());
 		logger_log(httpd->logger, LOGGER_WARNING, "Continuing without IPv6 support");

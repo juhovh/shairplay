@@ -51,7 +51,7 @@ RAOP_API raop_t *raop_init_from_keyfile(int max_clients, raop_callbacks_t *callb
 RAOP_API void raop_set_log_level(raop_t *raop, int level);
 RAOP_API void raop_set_log_callback(raop_t *raop, raop_log_callback_t callback, void *cls);
 
-RAOP_API int raop_start(raop_t *raop, unsigned short *port, const char *hwaddr, int hwaddrlen, const char *password);
+RAOP_API int raop_start(raop_t *raop, unsigned short *port, unsigned short dyn_port_min, unsigned short dyn_port_max, const char *hwaddr, int hwaddrlen, const char *password);
 RAOP_API int raop_is_running(raop_t *raop);
 RAOP_API void raop_stop(raop_t *raop);
 
