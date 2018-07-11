@@ -231,25 +231,18 @@ dnssd_register_raop(dnssd_t *dnssd, const char *name, unsigned short port, const
 	assert(hwaddr);
 
 	dnssd->TXTRecordCreate(&txtRecord, 0, NULL);
-	dnssd->TXTRecordSetValue(&txtRecord, "txtvers", strlen(RAOP_TXTVERS), RAOP_TXTVERS);
-	dnssd->TXTRecordSetValue(&txtRecord, "ch", strlen(RAOP_CH), RAOP_CH);
 	dnssd->TXTRecordSetValue(&txtRecord, "cn", strlen(RAOP_CN), RAOP_CN);
-	dnssd->TXTRecordSetValue(&txtRecord, "et", strlen(RAOP_ET), RAOP_ET);
-	dnssd->TXTRecordSetValue(&txtRecord, "sv", strlen(RAOP_SV), RAOP_SV);
 	dnssd->TXTRecordSetValue(&txtRecord, "da", strlen(RAOP_DA), RAOP_DA);
-	dnssd->TXTRecordSetValue(&txtRecord, "sr", strlen(RAOP_SR), RAOP_SR);
-	dnssd->TXTRecordSetValue(&txtRecord, "ss", strlen(RAOP_SS), RAOP_SS);
+	dnssd->TXTRecordSetValue(&txtRecord, "et", strlen(RAOP_ET), RAOP_ET);
+	dnssd->TXTRecordSetValue(&txtRecord, "md", strlen(RAOP_MD), RAOP_MD);
+	dnssd->TXTRecordSetValue(&txtRecord, "am", strlen(GLOBAL_MODEL), GLOBAL_MODEL);
+	dnssd->TXTRecordSetValue(&txtRecord, "tp", strlen(RAOP_TP), RAOP_TP);
+	dnssd->TXTRecordSetValue(&txtRecord, "vn", strlen(RAOP_VN), RAOP_VN);
+	dnssd->TXTRecordSetValue(&txtRecord, "vs", strlen(GLOBAL_VERSION), GLOBAL_VERSION);
+	dnssd->TXTRecordSetValue(&txtRecord, "vv", strlen(RAOP_VV), RAOP_VV);
 	if (password) {
 		dnssd->TXTRecordSetValue(&txtRecord, "pw", strlen("true"), "true");
-	} else {
-		dnssd->TXTRecordSetValue(&txtRecord, "pw", strlen("false"), "false");
 	}
-	dnssd->TXTRecordSetValue(&txtRecord, "vn", strlen(RAOP_VN), RAOP_VN);
-	dnssd->TXTRecordSetValue(&txtRecord, "tp", strlen(RAOP_TP), RAOP_TP);
-	dnssd->TXTRecordSetValue(&txtRecord, "md", strlen(RAOP_MD), RAOP_MD);
-	dnssd->TXTRecordSetValue(&txtRecord, "vs", strlen(GLOBAL_VERSION), GLOBAL_VERSION);
-	dnssd->TXTRecordSetValue(&txtRecord, "sm", strlen(RAOP_SM), RAOP_SM);
-	dnssd->TXTRecordSetValue(&txtRecord, "ek", strlen(RAOP_EK), RAOP_EK);
 
 	/* Convert hardware address to string */
 	ret = utils_hwaddr_raop(servname, sizeof(servname), hwaddr, hwaddrlen);
@@ -305,8 +298,9 @@ dnssd_register_airplay(dnssd_t *dnssd, const char *name, unsigned short port, co
 
 	dnssd->TXTRecordCreate(&txtRecord, 0, NULL);
 	dnssd->TXTRecordSetValue(&txtRecord, "deviceid", strlen(deviceid), deviceid);
-	dnssd->TXTRecordSetValue(&txtRecord, "features", strlen(features), features);
+	dnssd->TXTRecordSetValue(&txtRecord, "features", strlen("0x5A7FFFF7,0xE"), "0x5A7FFFF7,0xE");
 	dnssd->TXTRecordSetValue(&txtRecord, "model", strlen(GLOBAL_MODEL), GLOBAL_MODEL);
+	dnssd->TXTRecordSetValue(&txtRecord, "vv", 1, "2");
 
 	/* Register the service */
 	dnssd->DNSServiceRegister(&dnssd->airplayService, 0, 0,

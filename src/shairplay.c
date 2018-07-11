@@ -375,7 +375,7 @@ main(int argc, char *argv[])
 		return -1;
 	}
 
-	dnssd_register_raop(dnssd, options.apname, options.port, options.hwaddr, sizeof(options.hwaddr), 0);
+	dnssd_register_airplay(dnssd, options.apname, options.port, options.hwaddr, sizeof(options.hwaddr));
 
 	running = 1;
 	while (running) {
