@@ -72,6 +72,8 @@ struct raop_conn_s {
 };
 typedef struct raop_conn_s raop_conn_t;
 
+#include "raop_handlers.h"
+
 static void *
 conn_init(void *opaque, unsigned char *local, int locallen, unsigned char *remote, int remotelen)
 {
@@ -127,7 +129,6 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 	raop_conn_t *conn = ptr;
 	raop_t *raop = conn->raop;
 
-	http_response_t *res;
 	const char *method;
 	const char *cseq;
 	const char *challenge;
@@ -142,7 +143,7 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 		return;
 	}
 
-	res = http_response_init("RTSP/1.0", 200, "OK");
+	*response = http_response_init("RTSP/1.0", 200, "OK");
 
 	/* We need authorization for everything else than OPTIONS request */
 	if (strcmp(method, "OPTIONS") != 0 && strlen(raop->password)) {
@@ -171,9 +172,9 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 
 			/* Construct a new response */
 			require_auth = 1;
-			http_response_destroy(res);
-			res = http_response_init("RTSP/1.0", 401, "Unauthorized");
-			http_response_add_header(res, "WWW-Authenticate", authstr);
+			http_response_destroy(*response);
+			*response = http_response_init("RTSP/1.0", 401, "Unauthorized");
+			http_response_add_header(*response, "WWW-Authenticate", authstr);
 			free(authstr);
 			logger_log(conn->raop->logger, LOGGER_DEBUG, "Authentication unsuccessful, sending Unauthorized");
 		} else {
@@ -181,8 +182,8 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 		}
 	}
 
-	http_response_add_header(res, "CSeq", cseq);
-	http_response_add_header(res, "Apple-Jack-Status", "connected; type=analog");
+	http_response_add_header(*response, "CSeq", cseq);
+	http_response_add_header(*response, "Apple-Jack-Status", "connected; type=analog");
 
 	challenge = http_request_get_header(request, "Apple-Challenge");
 	if (!require_auth && challenge) {
@@ -191,205 +192,26 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 		memset(signature, 0, sizeof(signature));
 		rsakey_sign(raop->rsakey, signature, sizeof(signature), challenge,
 		            conn->local, conn->locallen, raop->hwaddr, raop->hwaddrlen);
-		http_response_add_header(res, "Apple-Response", signature);
+		http_response_add_header(*response, "Apple-Response", signature);
 
 		logger_log(conn->raop->logger, LOGGER_DEBUG, "Got challenge: %s", challenge);
 		logger_log(conn->raop->logger, LOGGER_DEBUG, "Got response: %s", signature);
 	}
 
+	raop_handler_t handler = NULL;
 	if (require_auth) {
 		/* Do nothing in case of authentication request */
+		handler = &raop_handler_none;
 	} else if (!strcmp(method, "OPTIONS")) {
-		http_response_add_header(res, "Public", "ANNOUNCE, SETUP, RECORD, PAUSE, FLUSH, TEARDOWN, OPTIONS, GET_PARAMETER, SET_PARAMETER");
+		handler = &raop_handler_options;
 	} else if (!strcmp(method, "ANNOUNCE")) {
-		const char *data;
-		int datalen;
-
-		unsigned char aeskey[16];
-		unsigned char aesiv[16];
-		int aeskeylen, aesivlen;
-
-		data = http_request_get_data(request, &datalen);
-		if (data) {
-			sdp_t *sdp;
-			const char *remotestr, *rtpmapstr, *fmtpstr, *aeskeystr, *aesivstr;
-
-			sdp = sdp_init(data, datalen);
-			remotestr = sdp_get_connection(sdp);
-			rtpmapstr = sdp_get_rtpmap(sdp);
-			fmtpstr = sdp_get_fmtp(sdp);
-			aeskeystr = sdp_get_rsaaeskey(sdp);
-			aesivstr = sdp_get_aesiv(sdp);
-
-			logger_log(conn->raop->logger, LOGGER_DEBUG, "connection: %s", remotestr);
-			logger_log(conn->raop->logger, LOGGER_DEBUG, "rtpmap: %s", rtpmapstr);
-			logger_log(conn->raop->logger, LOGGER_DEBUG, "fmtp: %s", fmtpstr);
-			logger_log(conn->raop->logger, LOGGER_DEBUG, "rsaaeskey: %s", aeskeystr);
-			logger_log(conn->raop->logger, LOGGER_DEBUG, "aesiv: %s", aesivstr);
-
-			aeskeylen = rsakey_decrypt(raop->rsakey, aeskey, sizeof(aeskey), aeskeystr);
-			aesivlen = rsakey_parseiv(raop->rsakey, aesiv, sizeof(aesiv), aesivstr);
-			logger_log(conn->raop->logger, LOGGER_DEBUG, "aeskeylen: %d", aeskeylen);
-			logger_log(conn->raop->logger, LOGGER_DEBUG, "aesivlen: %d", aesivlen);
-
-			if (conn->raop_rtp) {
-				/* This should never happen */
-				raop_rtp_destroy(conn->raop_rtp);
-				conn->raop_rtp = NULL;
-			}
-			conn->raop_rtp = raop_rtp_init(raop->logger, &raop->callbacks, remotestr, rtpmapstr, fmtpstr, aeskey, aesiv);
-			if (!conn->raop_rtp) {
-				logger_log(conn->raop->logger, LOGGER_ERR, "Error initializing the audio decoder");
-				http_response_set_disconnect(res, 1);
-			}
-			sdp_destroy(sdp);
-		}
+		handler = &raop_handler_announce;
 	} else if (!strcmp(method, "SETUP")) {
-		unsigned short remote_cport=0, remote_tport=0;
-		unsigned short cport=0, tport=0, dport=0;
-		const char *transport;
-		char buffer[1024];
-		int use_udp;
-		const char *dacp_id;
-		const char *active_remote_header;
-
-		dacp_id = http_request_get_header(request, "DACP-ID");
-		active_remote_header = http_request_get_header(request, "Active-Remote");
-
-		if (dacp_id && active_remote_header) {
-			logger_log(conn->raop->logger, LOGGER_DEBUG, "DACP-ID: %s", dacp_id);
-			logger_log(conn->raop->logger, LOGGER_DEBUG, "Active-Remote: %s", active_remote_header);
-			if (conn->raop_rtp) {
-			    raop_rtp_remote_control_id(conn->raop_rtp, dacp_id, active_remote_header);
-			}
-		}
-
-		transport = http_request_get_header(request, "Transport");
-		assert(transport);
-
-		logger_log(conn->raop->logger, LOGGER_INFO, "Transport: %s", transport);
-		use_udp = strncmp(transport, "RTP/AVP/TCP", 11);
-		if (use_udp) {
-			char *original, *current, *tmpstr;
-
-			current = original = strdup(transport);
-			if (original) {
-				while ((tmpstr = utils_strsep(&current, ";")) != NULL) {
-					unsigned short value;
-					int ret;
-
-					ret = sscanf(tmpstr, "control_port=%hu", &value);
-					if (ret == 1) {
-						logger_log(conn->raop->logger, LOGGER_DEBUG, "Found remote control port: %hu", value);
-						remote_cport = value;
-					}
-					ret = sscanf(tmpstr, "timing_port=%hu", &value);
-					if (ret == 1) {
-						logger_log(conn->raop->logger, LOGGER_DEBUG, "Found remote timing port: %hu", value);
-						remote_tport = value;
-					}
-				}
-			}
-			free(original);
-		}
-		if (conn->raop_rtp) {
-			raop_rtp_start(conn->raop_rtp, use_udp, remote_cport, remote_tport, &cport, &tport, &dport);
-		} else {
-			logger_log(conn->raop->logger, LOGGER_ERR, "RAOP not initialized at SETUP, playing will fail!");
-			http_response_set_disconnect(res, 1);
-		}
-
-		memset(buffer, 0, sizeof(buffer));
-		if (use_udp) {
-			snprintf(buffer, sizeof(buffer)-1,
-			         "RTP/AVP/UDP;unicast;mode=record;timing_port=%hu;events;control_port=%hu;server_port=%hu",
-			         tport, cport, dport);
-		} else {
-			snprintf(buffer, sizeof(buffer)-1,
-			         "RTP/AVP/TCP;unicast;interleaved=0-1;mode=record;server_port=%u",
-			         dport);
-		}
-		logger_log(conn->raop->logger, LOGGER_INFO, "Responding with %s", buffer);
-		http_response_add_header(res, "Transport", buffer);
-		http_response_add_header(res, "Session", "DEADBEEF");
+		handler = &raop_handler_setup;
 	} else if (!strcmp(method, "GET_PARAMETER")) {
-		const char *content_type;
-		const char *data;
-		int datalen;
-
-		content_type = http_request_get_header(request, "Content-Type");
-		data = http_request_get_data(request, &datalen);
-		if (!strcmp(content_type, "text/parameters")) {
-			const char *current = data;
-
-			while (current) {
-				const char *next;
-				int handled = 0;
-
-				/* This is a bit ugly, but seems to be how airport works too */
-				if (!strncmp(current, "volume\r\n", 8)) {
-					const char volume[] = "volume: 0.000000\r\n";
-
-					http_response_add_header(res, "Content-Type", "text/parameters");
-					response_data = strdup(volume);
-					if (response_data) {
-						response_datalen = strlen(response_data);
-					}
-					handled = 1;
-				}
-
-				next = strstr(current, "\r\n");
-				if (next && !handled) {
-					logger_log(conn->raop->logger, LOGGER_WARNING,
-					           "Found an unknown parameter: %.*s", (next - current), current);
-					current = next + 2;
-				} else if (next) {
-					current = next + 2;
-				} else {
-					current = NULL;
-				}
-			}
-		}
+		handler = &raop_handler_get_parameter;
 	} else if (!strcmp(method, "SET_PARAMETER")) {
-		const char *content_type;
-		const char *data;
-		int datalen;
-
-		content_type = http_request_get_header(request, "Content-Type");
-		data = http_request_get_data(request, &datalen);
-		if (!strcmp(content_type, "text/parameters")) {
-			char *datastr;
-			datastr = calloc(1, datalen+1);
-			if (data && datastr && conn->raop_rtp) {
-				memcpy(datastr, data, datalen);
-				if (!strncmp(datastr, "volume: ", 8)) {
-					float vol = 0.0;
-					sscanf(datastr+8, "%f", &vol);
-					raop_rtp_set_volume(conn->raop_rtp, vol);
-				} else if (!strncmp(datastr, "progress: ", 10)) {
-					unsigned int start, curr, end;
-					sscanf(datastr+10, "%u/%u/%u", &start, &curr, &end);
-					raop_rtp_set_progress(conn->raop_rtp, start, curr, end);
-				}
-			} else if (!conn->raop_rtp) {
-				logger_log(conn->raop->logger, LOGGER_WARNING, "RAOP not initialized at SET_PARAMETER");
-			}
-			free(datastr);
-		} else if (!strcmp(content_type, "image/jpeg") || !strcmp(content_type, "image/png")) {
-			logger_log(conn->raop->logger, LOGGER_INFO, "Got image data of %d bytes", datalen);
-			if (conn->raop_rtp) {
-				raop_rtp_set_coverart(conn->raop_rtp, data, datalen);
-			} else {
-				logger_log(conn->raop->logger, LOGGER_WARNING, "RAOP not initialized at SET_PARAMETER coverart");
-			}
-		} else if (!strcmp(content_type, "application/x-dmap-tagged")) {
-			logger_log(conn->raop->logger, LOGGER_INFO, "Got metadata of %d bytes", datalen);
-			if (conn->raop_rtp) {
-				raop_rtp_set_metadata(conn->raop_rtp, data, datalen);
-			} else {
-				logger_log(conn->raop->logger, LOGGER_WARNING, "RAOP not initialized at SET_PARAMETER metadata");
-			}
-		}
+		handler = &raop_handler_set_parameter;
 	} else if (!strcmp(method, "FLUSH")) {
 		const char *rtpinfo;
 		int next_seq = -1;
@@ -407,7 +229,7 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 			logger_log(conn->raop->logger, LOGGER_WARNING, "RAOP not initialized at FLUSH");
 		}
 	} else if (!strcmp(method, "TEARDOWN")) {
-		http_response_add_header(res, "Connection", "close");
+		http_response_add_header(*response, "Connection", "close");
 		if (conn->raop_rtp) {
 			/* Destroy our RTP session */
 			raop_rtp_stop(conn->raop_rtp);
@@ -415,7 +237,10 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 			conn->raop_rtp = NULL;
 		}
 	}
-	http_response_finish(res, response_data, response_datalen);
+	if (handler != NULL) {
+		handler(conn, request, *response, &response_data, &response_datalen);
+	}
+	http_response_finish(*response, response_data, response_datalen);
 	if (response_data) {
 		free(response_data);
 		response_data = NULL;
@@ -423,7 +248,6 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 	}
 
 	logger_log(conn->raop->logger, LOGGER_DEBUG, "Handled request %s with URL %s", method, http_request_get_url(request));
-	*response = res;
 }
 
 static void
