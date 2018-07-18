@@ -1,4 +1,4 @@
-SUBDIRS = crypto alac curve25519
+SUBDIRS = crypto alac curve25519 ed25519
 
 AM_CPPFLAGS = -I$(top_srcdir)/include/shairplay
 
@@ -7,7 +7,7 @@ libshairplay_la_SOURCES = base64.c base64.h digest.c digest.h dnssd.c dnssdint.h
 libshairplay_la_CPPFLAGS = $(AM_CPPFLAGS)
 
 # This library depends on 3rd party libraries
-libshairplay_la_LIBADD = crypto/libcrypto.la alac/libalac.la curve25519/libcurve25519.la
+libshairplay_la_LIBADD = crypto/libcrypto.la alac/libalac.la curve25519/libcurve25519.la ed25519/libed25519.la
 libshairplay_la_LDFLAGS = -no-undefined -version-info 0:0:0
 
 ### Update -version-info above with the following rules

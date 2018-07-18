@@ -81,5 +81,6 @@ AC_CONFIG_FILES(
 	[src/lib/alac/Makefile]
 	[src/lib/crypto/Makefile]
 	[src/lib/curve25519/Makefile]
+	[src/lib/ed25519/Makefile]
 )
 AC_OUTPUT
