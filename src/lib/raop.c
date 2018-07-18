@@ -19,6 +19,7 @@
 
 #include "raop.h"
 #include "raop_rtp.h"
+#include "pairing.h"
 #include "rsakey.h"
 #include "digest.h"
 #include "httpd.h"
@@ -46,7 +47,8 @@ struct raop_s {
 	/* Logger instance */
 	logger_t *logger;
 
-	/* HTTP daemon and RSA key */
+	/* Pairing, HTTP daemon and RSA key */
+	pairing_t *pairing;
 	httpd_t *httpd;
 	rsakey_t *rsakey;
 
@@ -61,6 +63,7 @@ struct raop_s {
 struct raop_conn_s {
 	raop_t *raop;
 	raop_rtp_t *raop_rtp;
+	pairing_session_t *pairing;
 
 	unsigned char *local;
 	int locallen;
@@ -77,14 +80,22 @@ typedef struct raop_conn_s raop_conn_t;
 static void *
 conn_init(void *opaque, unsigned char *local, int locallen, unsigned char *remote, int remotelen)
 {
+	raop_t *raop = opaque;
 	raop_conn_t *conn;
+
+	assert(raop);
 
 	conn = calloc(1, sizeof(raop_conn_t));
 	if (!conn) {
 		return NULL;
 	}
-	conn->raop = opaque;
+	conn->raop = raop;
 	conn->raop_rtp = NULL;
+	conn->pairing = pairing_session_init(raop->pairing);
+	if (!conn->pairing) {
+		free(conn);
+		return NULL;
+	}
 
 	if (locallen == 4) {
 		logger_log(conn->raop->logger, LOGGER_INFO,
@@ -205,6 +216,10 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 	if (require_auth) {
 		/* Do nothing in case of authentication request */
 		handler = &raop_handler_none;
+	} else if (!strcmp(method, "POST") && !strcmp(url, "/pair-setup")) {
+		handler = &raop_handler_pairsetup;
+	} else if (!strcmp(method, "POST") && !strcmp(url, "/pair-verify")) {
+		handler = &raop_handler_pairverify;
 	} else if (!strcmp(method, "OPTIONS")) {
 		handler = &raop_handler_options;
 	} else if (!strcmp(method, "ANNOUNCE")) {
@@ -262,6 +277,7 @@ conn_destroy(void *ptr)
 	}
 	free(conn->local);
 	free(conn->remote);
+	pairing_session_destroy(conn->pairing);
 	free(conn);
 }
 
@@ -269,6 +285,7 @@ raop_t *
 raop_init(int max_clients, raop_callbacks_t *callbacks, const char *pemkey, int *error)
 {
 	raop_t *raop;
+	pairing_t *pairing;
 	httpd_t *httpd;
 	rsakey_t *rsakey;
 	httpd_callbacks_t httpd_cbs;
@@ -299,6 +316,12 @@ raop_init(int max_clients, raop_callbacks_t *callbacks, const char *pemkey, int 
 	/* Initialize the logger */
 	raop->logger = logger_init();
 
+	pairing = pairing_init_generate();
+	if (!pairing) {
+		free(raop);
+		return NULL;
+	}
+
 	/* Set HTTP callbacks to our handlers */
 	memset(&httpd_cbs, 0, sizeof(httpd_cbs));
 	httpd_cbs.opaque = raop;
@@ -309,6 +332,7 @@ raop_init(int max_clients, raop_callbacks_t *callbacks, const char *pemkey, int 
 	/* Initialize the http daemon */
 	httpd = httpd_init(raop->logger, &httpd_cbs, max_clients);
 	if (!httpd) {
+		pairing_destroy(pairing);
 		free(raop);
 		return NULL;
 	}
@@ -319,11 +343,13 @@ raop_init(int max_clients, raop_callbacks_t *callbacks, const char *pemkey, int 
 	/* Initialize RSA key handler */
 	rsakey = rsakey_init_pem(pemkey);
 	if (!rsakey) {
-		free(httpd);
+		pairing_destroy(pairing);
+		httpd_destroy(httpd);
 		free(raop);
 		return NULL;
 	}
 
+	raop->pairing = pairing;
 	raop->httpd = httpd;
 	raop->rsakey = rsakey;
 
@@ -350,6 +376,7 @@ raop_destroy(raop_t *raop)
 	if (raop) {
 		raop_stop(raop);
 
+		pairing_destroy(raop->pairing);
 		httpd_destroy(raop->httpd);
 		rsakey_destroy(raop->rsakey);
 		logger_destroy(raop->logger);

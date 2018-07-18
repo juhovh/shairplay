@@ -1,3 +1,20 @@
+/**
+ *  Copyright (C) 2018  Juho Vähä-Herttua
+ *
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 2.1 of the License, or (at your option) any later version.
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ */
+
+#include "crypto/crypto.h"
+#include "ed25519/sha512.h"
+#include "aes_ctr.h"
 
 /* This file should be only included from raop.c as it defines static handler
  * functions and depends on raop internals */
@@ -10,6 +27,86 @@ raop_handler_none(raop_conn_t *conn,
                   http_request_t *request, http_response_t *response,
                   char **response_data, int *response_datalen)
 {
+}
+
+static void
+raop_handler_pairsetup(raop_conn_t *conn,
+                       http_request_t *request, http_response_t *response,
+                       char **response_data, int *response_datalen)
+{
+	unsigned char public_key[32];
+	const char *data;
+	int datalen;
+
+	data = http_request_get_data(request, &datalen);
+	if (datalen != 32) {
+		logger_log(conn->raop->logger, LOGGER_ERR, "Invalid pair-setup data");
+		return;
+	}
+
+	pairing_get_public_key(conn->raop->pairing, public_key);
+
+	*response_data = malloc(sizeof(public_key));
+	if (*response_data) {
+		http_response_add_header(response, "Content-Type", "application/octet-stream");
+		memcpy(*response_data, public_key, sizeof(public_key));
+		*response_datalen = sizeof(public_key);
+	}
+}
+
+static void
+raop_handler_pairverify(raop_conn_t *conn,
+                        http_request_t *request, http_response_t *response,
+                        char **response_data, int *response_datalen)
+{
+	unsigned char public_key[32];
+	unsigned char signature[64];
+	const unsigned char *data;
+	int datalen;
+
+	data = (unsigned char *) http_request_get_data(request, &datalen);
+	if (datalen < 4) {
+		logger_log(conn->raop->logger, LOGGER_ERR, "Invalid pair-verify data");
+		return;
+	}
+	switch (data[0]) {
+	case 1:
+		if (datalen != 4 + 32 + 32) {
+			logger_log(conn->raop->logger, LOGGER_ERR, "Invalid pair-verify data");
+			return;
+		}
+
+		/* We can fall through these errors, the result will just be garbage... */
+		if (pairing_session_handshake(conn->pairing, data + 4, data + 4 + 32)) {
+			logger_log(conn->raop->logger, LOGGER_ERR, "Error initializing pair-verify handshake");
+		}
+		if (pairing_session_get_public_key(conn->pairing, public_key)) {
+			logger_log(conn->raop->logger, LOGGER_ERR, "Error getting ECDH public key");
+		}
+		if (pairing_session_get_signature(conn->pairing, signature)) {
+			logger_log(conn->raop->logger, LOGGER_ERR, "Error getting ED25519 signature");
+		}
+		*response_data = malloc(sizeof(public_key) + sizeof(signature));
+		if (*response_data) {
+			http_response_add_header(response, "Content-Type", "application/octet-stream");
+			memcpy(*response_data, public_key, sizeof(public_key));
+			memcpy(*response_data + sizeof(public_key), signature, sizeof(signature));
+			*response_datalen = sizeof(public_key) + sizeof(signature);
+		}
+		break;
+	case 0:
+		if (datalen != 4 + 64) {
+			logger_log(conn->raop->logger, LOGGER_ERR, "Invalid pair-verify data");
+			return;
+		}
+
+		if (pairing_session_finish(conn->pairing, data + 4)) {
+			logger_log(conn->raop->logger, LOGGER_ERR, "Incorrect pair-verify signature");
+			http_response_set_disconnect(response, 1);
+			return;
+		}
+		break;
+	}
 }
 
 static void
