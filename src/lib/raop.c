@@ -130,6 +130,7 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 	raop_t *raop = conn->raop;
 
 	const char *method;
+	const char *url;
 	const char *cseq;
 	const char *challenge;
 	int require_auth = 0;
@@ -138,6 +139,7 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 	int response_datalen = 0;
 
 	method = http_request_get_method(request);
+	url = http_request_get_url(request);
 	cseq = http_request_get_header(request, "CSeq");
 	if (!method || !cseq) {
 		return;
@@ -154,7 +156,7 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 			logger_log(conn->raop->logger, LOGGER_DEBUG, "Our nonce: %s", conn->nonce);
 			logger_log(conn->raop->logger, LOGGER_DEBUG, "Authorization: %s", authorization);
 		}
-		if (!digest_is_valid(realm, raop->password, conn->nonce, method, http_request_get_url(request), authorization)) {
+		if (!digest_is_valid(realm, raop->password, conn->nonce, method, url, authorization)) {
 			char *authstr;
 			int authstrlen;
 
@@ -198,6 +200,7 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 		logger_log(conn->raop->logger, LOGGER_DEBUG, "Got response: %s", signature);
 	}
 
+	logger_log(conn->raop->logger, LOGGER_DEBUG, "Handling request %s with URL %s", method, url);
 	raop_handler_t handler = NULL;
 	if (require_auth) {
 		/* Do nothing in case of authentication request */
@@ -246,8 +249,6 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 		response_data = NULL;
 		response_datalen = 0;
 	}
-
-	logger_log(conn->raop->logger, LOGGER_DEBUG, "Handled request %s with URL %s", method, http_request_get_url(request));
 }
 
 static void
