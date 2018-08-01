@@ -27,6 +27,7 @@
 
 #include "global.h"
 #include "utils.h"
+#include "fairplay.h"
 #include "netutils.h"
 #include "logger.h"
 #include "compat.h"
@@ -63,6 +64,7 @@ struct raop_s {
 struct raop_conn_s {
 	raop_t *raop;
 	raop_rtp_t *raop_rtp;
+	fairplay_t *fairplay;
 	pairing_session_t *pairing;
 
 	unsigned char *local;
@@ -91,8 +93,14 @@ conn_init(void *opaque, unsigned char *local, int locallen, unsigned char *remot
 	}
 	conn->raop = raop;
 	conn->raop_rtp = NULL;
+	conn->fairplay = fairplay_init(raop->logger);
+	if (!conn->fairplay) {
+		free(conn);
+		return NULL;
+	}
 	conn->pairing = pairing_session_init(raop->pairing);
 	if (!conn->pairing) {
+		fairplay_destroy(conn->fairplay);
 		free(conn);
 		return NULL;
 	}
@@ -220,6 +228,8 @@ conn_request(void *ptr, http_request_t *request, http_response_t **response)
 		handler = &raop_handler_pairsetup;
 	} else if (!strcmp(method, "POST") && !strcmp(url, "/pair-verify")) {
 		handler = &raop_handler_pairverify;
+	} else if (!strcmp(method, "POST") && !strcmp(url, "/fp-setup")) {
+		handler = &raop_handler_fpsetup;
 	} else if (!strcmp(method, "OPTIONS")) {
 		handler = &raop_handler_options;
 	} else if (!strcmp(method, "ANNOUNCE")) {
@@ -278,6 +288,7 @@ conn_destroy(void *ptr)
 	free(conn->local);
 	free(conn->remote);
 	pairing_session_destroy(conn->pairing);
+	fairplay_destroy(conn->fairplay);
 	free(conn);
 }
 

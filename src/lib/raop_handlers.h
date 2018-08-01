@@ -12,10 +12,6 @@
  *  Lesser General Public License for more details.
  */
 
-#include "crypto/crypto.h"
-#include "ed25519/sha512.h"
-#include "aes_ctr.h"
-
 /* This file should be only included from raop.c as it defines static handler
  * functions and depends on raop internals */
 
@@ -110,6 +106,43 @@ raop_handler_pairverify(raop_conn_t *conn,
 }
 
 static void
+raop_handler_fpsetup(raop_conn_t *conn,
+                        http_request_t *request, http_response_t *response,
+                        char **response_data, int *response_datalen)
+{
+	const unsigned char *data;
+	int datalen;
+
+	data = (unsigned char *) http_request_get_data(request, &datalen);
+	if (datalen == 16) {
+		*response_data = malloc(142);
+		if (*response_data) {
+			if (!fairplay_setup(conn->fairplay, data, (unsigned char *) *response_data)) {
+				*response_datalen = 142;
+			} else {
+				// Handle error?
+				free(*response_data);
+				*response_data = NULL;
+			}
+		}
+	} else if (datalen == 164) {
+		*response_data = malloc(32);
+		if (*response_data) {
+			if (!fairplay_handshake(conn->fairplay, data, (unsigned char *) *response_data)) {
+				*response_datalen = 32;
+			} else {
+				// Handle error?
+				free(*response_data);
+				*response_data = NULL;
+			}
+		}
+	} else {
+		logger_log(conn->raop->logger, LOGGER_ERR, "Invalid fp-setup data length");
+		return;
+	}
+}
+
+static void
 raop_handler_options(raop_conn_t *conn,
                      http_request_t *request, http_response_t *response,
                      char **response_data, int *response_datalen)
@@ -127,28 +160,45 @@ raop_handler_announce(raop_conn_t *conn,
 
 	unsigned char aeskey[16];
 	unsigned char aesiv[16];
-	int aeskeylen, aesivlen;
+	int aeskeylen = -1, aesivlen = -1;
 
 	data = http_request_get_data(request, &datalen);
 	if (data) {
 		sdp_t *sdp;
-		const char *remotestr, *rtpmapstr, *fmtpstr, *aeskeystr, *aesivstr;
+		const char *remotestr, *rtpmapstr, *fmtpstr, *rsaaeskeystr, *fpaeskeystr, *aesivstr;
 
 		sdp = sdp_init(data, datalen);
 		remotestr = sdp_get_connection(sdp);
 		rtpmapstr = sdp_get_rtpmap(sdp);
 		fmtpstr = sdp_get_fmtp(sdp);
-		aeskeystr = sdp_get_rsaaeskey(sdp);
+		rsaaeskeystr = sdp_get_rsaaeskey(sdp);
+		fpaeskeystr = sdp_get_fpaeskey(sdp);
 		aesivstr = sdp_get_aesiv(sdp);
 
 		logger_log(conn->raop->logger, LOGGER_DEBUG, "connection: %s", remotestr);
 		logger_log(conn->raop->logger, LOGGER_DEBUG, "rtpmap: %s", rtpmapstr);
 		logger_log(conn->raop->logger, LOGGER_DEBUG, "fmtp: %s", fmtpstr);
-		logger_log(conn->raop->logger, LOGGER_DEBUG, "rsaaeskey: %s", aeskeystr);
+		if (rsaaeskeystr) {
+			logger_log(conn->raop->logger, LOGGER_DEBUG, "rsaaeskey: %s", rsaaeskeystr);
+		}
+		if (fpaeskeystr) {
+			logger_log(conn->raop->logger, LOGGER_DEBUG, "fpaeskey: %s", fpaeskeystr);
+		}
 		logger_log(conn->raop->logger, LOGGER_DEBUG, "aesiv: %s", aesivstr);
 
-		aeskeylen = rsakey_decrypt(conn->raop->rsakey, aeskey, sizeof(aeskey), aeskeystr);
-		aesivlen = rsakey_parseiv(conn->raop->rsakey, aesiv, sizeof(aesiv), aesivstr);
+		if (rsaaeskeystr) {
+			aeskeylen = rsakey_decrypt(conn->raop->rsakey, aeskey, sizeof(aeskey), rsaaeskeystr);
+		} else if (fpaeskeystr) {
+			unsigned char fpaeskey[72];
+			int fpaeskeylen;
+
+			fpaeskeylen = rsakey_decode(conn->raop->rsakey, fpaeskey, sizeof(fpaeskey), fpaeskeystr);
+			if (fpaeskeylen > 0) {
+				fairplay_decrypt(conn->fairplay, fpaeskey, aeskey);
+				aeskeylen = sizeof(aeskey);
+			}
+		}
+		aesivlen = rsakey_decode(conn->raop->rsakey, aesiv, sizeof(aesiv), aesivstr);
 		logger_log(conn->raop->logger, LOGGER_DEBUG, "aeskeylen: %d", aeskeylen);
 		logger_log(conn->raop->logger, LOGGER_DEBUG, "aesivlen: %d", aesivlen);
 
@@ -157,8 +207,10 @@ raop_handler_announce(raop_conn_t *conn,
 			raop_rtp_destroy(conn->raop_rtp);
 			conn->raop_rtp = NULL;
 		}
-		conn->raop_rtp = raop_rtp_init(conn->raop->logger, &conn->raop->callbacks,
-		                               remotestr, rtpmapstr, fmtpstr, aeskey, aesiv);
+		if (aeskeylen == sizeof(aeskey) && aesivlen == sizeof(aesiv)) {
+			conn->raop_rtp = raop_rtp_init(conn->raop->logger, &conn->raop->callbacks,
+						       remotestr, rtpmapstr, fmtpstr, aeskey, aesiv);
+		}
 		if (!conn->raop_rtp) {
 			logger_log(conn->raop->logger, LOGGER_ERR, "Error initializing the audio decoder");
 			http_response_set_disconnect(response, 1);

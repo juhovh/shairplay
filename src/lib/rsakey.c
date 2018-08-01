@@ -361,7 +361,7 @@ rsakey_decrypt(rsakey_t *rsakey, unsigned char *dst, int dstlen, const char *b64
 }
 
 int
-rsakey_parseiv(rsakey_t *rsakey, unsigned char *dst, int dstlen, const char *b64input)
+rsakey_decode(rsakey_t *rsakey, unsigned char *dst, int dstlen, const char *b64input)
 {
 	unsigned char *tmpptr;
 	int length;

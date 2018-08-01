@@ -32,7 +32,7 @@ int rsakey_sign(rsakey_t *rsakey, char *dst, int dstlen, const char *b64digest,
                 unsigned char *hwaddr, int hwaddrlen);
 
 int rsakey_decrypt(rsakey_t *rsakey, unsigned char *dst, int dstlen, const char *b64input);
-int rsakey_parseiv(rsakey_t *rsakey, unsigned char *dst, int dstlen, const char *b64input);
+int rsakey_decode(rsakey_t *rsakey, unsigned char *dst, int dstlen, const char *b64input);
 
 void rsakey_destroy(rsakey_t *rsakey);
 

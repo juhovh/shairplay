@@ -73,6 +73,9 @@ AM_COND_IF(HAVE_LIBAO,
 AC_ARG_WITH([playfair],
 	AS_HELP_STRING([--with-playfair], [Build with playfair support]))
 AM_CONDITIONAL([WITH_PLAYFAIR], [test x"$with_playfair" = x"yes"])
+AM_COND_IF([WITH_PLAYFAIR],
+	[AC_DEFINE([HAVE_FAIRPLAY], [1],
+	           [Define if you have the libdl library or equivalent.])])
 
 
 AC_CONFIG_FILES(
