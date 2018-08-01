@@ -26,7 +26,6 @@ AC_HEADER_STDC
 AC_CHECK_LIB([socket],[connect])
 AC_CHECK_LIB([pthread],[pthread_create])
 
-
 # Custom check for os, similar to webkit
 AC_MSG_CHECKING([for native Win32])
 case "$host" in
@@ -51,26 +50,21 @@ case "$host" in
        ;;
 esac
 
-case "$host_os" in
-     gnu* | linux* | k*bsd*-gnu)
-       os_gnu=yes
-       ;;
-     *)
-       os_gnu=no
-       ;;
-esac
-
 # OS conditionals
 AM_CONDITIONAL([OS_WIN32],[test "$os_win32" = "yes"])
 AM_CONDITIONAL([OS_UNIX],[test "$os_win32" = "no"])
 AM_CONDITIONAL([OS_LINUX],[test "$os_linux" = "yes"])
-AM_CONDITIONAL([OS_GNU],[test "$os_gnu" = "yes"])
+AM_CONDITIONAL([OS_DARWIN],[test "$os_darwin" = "yes"])
 AM_CONDITIONAL([OS_FREEBSD],[test "$os_freebsd" = "yes"])
 
 # Custom check for libao
 PKG_CHECK_MODULES([libao], [ao >= 1.1.0], [have_libao=1], [have_libao=0])
 AM_CONDITIONAL([HAVE_LIBAO], [test "$have_libao" -eq 1])
 
+# Optional playfair support
+AC_ARG_WITH([playfair],
+	AS_HELP_STRING([--with-playfair], [Build with playfair support]))
+AM_CONDITIONAL([WITH_PLAYFAIR],[test "$with_playfair" = "yes"])
 
 
 AC_CONFIG_FILES(
@@ -82,5 +76,6 @@ AC_CONFIG_FILES(
 	[src/lib/crypto/Makefile]
 	[src/lib/curve25519/Makefile]
 	[src/lib/ed25519/Makefile]
+	[src/lib/playfair/Makefile]
 )
 AC_OUTPUT
