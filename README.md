@@ -32,6 +32,13 @@ sudo make install
 Notice that libao is required in order to install the shairplay binary,
 otherwise only the library is compiled and installed.
 
+### Fairplay handshake support
+
+The library has experimental support for handling fairplay handshake (used in
+for example screen mirroring) using a playfair library that is licensed under
+GPLv3. This can be enabled by adding ```--with-playfair``` to the
+```./configure``` command above.
+
 Usage
 -----
 
