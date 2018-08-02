@@ -14,11 +14,15 @@ AC_LIBTOOL_WIN32_DLL
 AC_PROG_LIBTOOL
 
 # Checks for libraries.
-LT_LIB_DLLOAD
 LT_LIB_M
+LT_LIB_DLLOAD
 
 # Checks for header files.
 AC_HEADER_STDC
+if test x"$libltdl_cv_lib_dl_dlopen" != x"yes" ; then
+	AC_CHECK_HEADERS([dns_sd.h], [],
+	                 [AC_MSG_ERROR([Could not find dns_sd.h header, please install libavahi-compat-libdnssd-dev or equivalent.])])
+fi
 
 # Checks for typedefs, structures, and compiler characteristics.
 
@@ -51,11 +55,11 @@ case "$host" in
 esac
 
 # OS conditionals
-AM_CONDITIONAL([OS_WIN32],[test "$os_win32" = "yes"])
-AM_CONDITIONAL([OS_UNIX],[test "$os_win32" = "no"])
-AM_CONDITIONAL([OS_LINUX],[test "$os_linux" = "yes"])
-AM_CONDITIONAL([OS_DARWIN],[test "$os_darwin" = "yes"])
-AM_CONDITIONAL([OS_FREEBSD],[test "$os_freebsd" = "yes"])
+AM_CONDITIONAL([OS_WIN32], [test x"$os_win32" = x"yes"])
+AM_CONDITIONAL([OS_UNIX], [test x"$os_win32" = x"no"])
+AM_CONDITIONAL([OS_LINUX], [test x"$os_linux" = x"yes"])
+AM_CONDITIONAL([OS_DARWIN], [test x"$os_darwin" = x"yes"])
+AM_CONDITIONAL([OS_FREEBSD], [test x"$os_freebsd" = x"yes"])
 
 # Custom check for libao
 PKG_CHECK_MODULES([libao], [ao >= 1.1.0], [have_libao=1], [have_libao=0])
@@ -64,7 +68,7 @@ AM_CONDITIONAL([HAVE_LIBAO], [test "$have_libao" -eq 1])
 # Optional playfair support
 AC_ARG_WITH([playfair],
 	AS_HELP_STRING([--with-playfair], [Build with playfair support]))
-AM_CONDITIONAL([WITH_PLAYFAIR],[test "$with_playfair" = "yes"])
+AM_CONDITIONAL([WITH_PLAYFAIR], [test x"$with_playfair" = x"yes"])
 
 
 AC_CONFIG_FILES(
