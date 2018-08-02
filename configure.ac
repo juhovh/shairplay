@@ -19,9 +19,10 @@ LT_LIB_DLLOAD
 
 # Checks for header files.
 AC_HEADER_STDC
-if test x"$libltdl_cv_lib_dl_dlopen" != x"yes" ; then
-	AC_CHECK_HEADERS([dns_sd.h], [],
-	                 [AC_MSG_ERROR([Could not find dns_sd.h header, please install libavahi-compat-libdnssd-dev or equivalent.])])
+if test yes = "$libltdl_cv_func_dlopen" || test yes = "$libltdl_cv_lib_dl_dlopen"
+then
+  AC_CHECK_HEADERS([dns_sd.h], [],
+                   [AC_MSG_ERROR([Could not find dns_sd.h header, please install libavahi-compat-libdnssd-dev or equivalent.])])
 fi
 
 # Checks for typedefs, structures, and compiler characteristics.
@@ -64,6 +65,9 @@ AM_CONDITIONAL([OS_FREEBSD], [test x"$os_freebsd" = x"yes"])
 # Custom check for libao
 PKG_CHECK_MODULES([libao], [ao >= 1.1.0], [have_libao=1], [have_libao=0])
 AM_CONDITIONAL([HAVE_LIBAO], [test "$have_libao" -eq 1])
+AM_COND_IF(HAVE_LIBAO,
+  [AC_MSG_NOTICE([libao audio library found: Building both shairplay binary and libshairplay library.])],
+  [AC_MSG_WARN([libao audio library not found: Building shairplay library only.])])
 
 # Optional playfair support
 AC_ARG_WITH([playfair],
