@@ -76,7 +76,7 @@ fairplay_decrypt(fairplay_t *fp, const unsigned char input[72], unsigned char ou
 		return -1;
 	}
 
-	playfair_decrypt(fp->keymsg, input, output);
+	playfair_decrypt(fp->keymsg, (unsigned char *) input, output);
 	return 0;
 }
 
