@@ -22,6 +22,9 @@
 #include "ed25519/sha512.h"
 #include "aes_ctr.h"
 
+#define SALT_KEY "Pair-Verify-AES-Key"
+#define SALT_IV "Pair-Verify-AES-IV"
+
 struct pairing_s {
 	unsigned char ed_private[64];
 	unsigned char ed_public[32];
@@ -46,7 +49,7 @@ struct pairing_session_s {
 };
 
 static int
-derive_key_internal(pairing_session_t *session, const char *salt, unsigned char *key, unsigned int keylen)
+derive_key_internal(pairing_session_t *session, const unsigned char *salt, unsigned int saltlen, unsigned char *key, unsigned int keylen)
 {
 	sha512_context ctx;
 	unsigned char hash[64];
@@ -55,7 +58,7 @@ derive_key_internal(pairing_session_t *session, const char *salt, unsigned char 
 		return -1;
 	}
 	sha512_init(&ctx);
-	sha512_update(&ctx, (unsigned char *) salt, strlen(salt));
+	sha512_update(&ctx, salt, saltlen);
 	sha512_update(&ctx, session->ecdh_secret, 32);
 	sha512_final(&ctx, hash);
 
@@ -172,8 +175,8 @@ pairing_session_get_signature(pairing_session_t *session, unsigned char signatur
 	ed25519_sign(signature, sig_msg, sizeof(sig_msg), session->ed_ours, session->ed_private);
 
 	/* Then encrypt the result with keys derived from the shared secret */
-	derive_key_internal(session, "Pair-Verify-AES-Key", key, sizeof(key));
-	derive_key_internal(session, "Pair-Verify-AES-IV", iv, sizeof(key));
+	derive_key_internal(session, (const unsigned char *) SALT_KEY, strlen(SALT_KEY), key, sizeof(key));
+	derive_key_internal(session, (const unsigned char *) SALT_IV, strlen(SALT_IV), iv, sizeof(key));
 	AES_ctr_set_key(&aes_ctx, key, iv, AES_MODE_128);
 	AES_ctr_encrypt(&aes_ctx, signature, signature, 64);
 	return 0;
@@ -195,8 +198,8 @@ pairing_session_finish(pairing_session_t *session, const unsigned char signature
 	}
 
 	/* First decrypt the signature with keys derived from the shared secret */
-	derive_key_internal(session, "Pair-Verify-AES-Key", key, sizeof(key));
-	derive_key_internal(session, "Pair-Verify-AES-IV", iv, sizeof(key));
+	derive_key_internal(session, (const unsigned char *) SALT_KEY, strlen(SALT_KEY), key, sizeof(key));
+	derive_key_internal(session, (const unsigned char *) SALT_IV, strlen(SALT_IV), iv, sizeof(key));
 	AES_ctr_set_key(&aes_ctx, key, iv, AES_MODE_128);
 	/* One fake round for the initial handshake encryption */
 	AES_ctr_encrypt(&aes_ctx, sig_buffer, sig_buffer, 64);
@@ -214,11 +217,13 @@ pairing_session_finish(pairing_session_t *session, const unsigned char signature
 }
 
 int
-pairing_session_derive_key(pairing_session_t *session, const char *salt, unsigned char *key, unsigned int keylen)
+pairing_session_derive_key(pairing_session_t *session,
+                           const unsigned char *salt, unsigned int saltlen,
+                           unsigned char *key, unsigned int keylen)
 {
 	assert(session);
 
-	return derive_key_internal(session, salt, key, keylen);
+	return derive_key_internal(session, salt, saltlen, key, keylen);
 }
 
 void
