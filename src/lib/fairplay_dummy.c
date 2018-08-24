@@ -8,7 +8,8 @@ struct fairplay_s {
 fairplay_t *
 fairplay_init(logger_t *logger)
 {
-	return NULL;
+	/* NULL would mean failure so let's use any number */
+	return (void *) 42;
 }
 
 int

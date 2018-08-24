@@ -97,9 +97,10 @@ httpd_destroy(httpd_t *httpd)
 	}
 }
 
-static void
+static int
 httpd_add_connection(httpd_t *httpd, int fd, unsigned char *local, int local_len, unsigned char *remote, int remote_len)
 {
+	void *user_data;
 	int i;
 
 	for (i=0; i<httpd->max_connections; i++) {
@@ -110,15 +111,20 @@ httpd_add_connection(httpd_t *httpd, int fd, unsigned char *local, int local_len
 	if (i == httpd->max_connections) {
 		/* This code should never be reached, we do not select server_fds when full */
 		logger_log(httpd->logger, LOGGER_INFO, "Max connections reached");
-		shutdown(fd, SHUT_RDWR);
-		closesocket(fd);
-		return;
+		return -1;
+	}
+
+	user_data = httpd->callbacks.conn_init(httpd->callbacks.opaque, local, local_len, remote, remote_len);
+	if (!user_data) {
+		logger_log(httpd->logger, LOGGER_ERR, "Error initializing HTTP request handler");
+		return -1;
 	}
 
 	httpd->open_connections++;
 	httpd->connections[i].socket_fd = fd;
 	httpd->connections[i].connected = 1;
-	httpd->connections[i].user_data = httpd->callbacks.conn_init(httpd->callbacks.opaque, local, local_len, remote, remote_len);
+	httpd->connections[i].user_data = user_data;
+	return 0;
 }
 
 static int
@@ -142,6 +148,7 @@ httpd_accept_connection(httpd_t *httpd, int server_fd, int is_ipv6)
 	local_saddrlen = sizeof(local_saddr);
 	ret = getsockname(fd, (struct sockaddr *)&local_saddr, &local_saddrlen);
 	if (ret == -1) {
+		shutdown(fd, SHUT_RDWR);
 		closesocket(fd);
 		return 0;
 	}
@@ -151,7 +158,12 @@ httpd_accept_connection(httpd_t *httpd, int server_fd, int is_ipv6)
 	local = netutils_get_address(&local_saddr, &local_len);
 	remote = netutils_get_address(&remote_saddr, &remote_len);
 
-	httpd_add_connection(httpd, fd, local, local_len, remote, remote_len);
+	ret = httpd_add_connection(httpd, fd, local, local_len, remote, remote_len);
+	if (ret == -1) {
+		shutdown(fd, SHUT_RDWR);
+		closesocket(fd);
+		return 0;
+	}
 	return 1;
 }
 
