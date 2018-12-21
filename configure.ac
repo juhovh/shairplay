@@ -19,7 +19,7 @@ LT_LIB_DLLOAD
 
 # Checks for header files.
 AC_HEADER_STDC
-if test yes = "$libltdl_cv_func_dlopen" || test yes = "$libltdl_cv_lib_dl_dlopen"
+if test no = "$libltdl_cv_func_dlopen" && test no = "$libltdl_cv_lib_dl_dlopen"
 then
   AC_CHECK_HEADERS([dns_sd.h], [],
                    [AC_MSG_ERROR([Could not find dns_sd.h header, please install libavahi-compat-libdnssd-dev or equivalent.])])
