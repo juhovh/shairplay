@@ -300,6 +300,7 @@ dnssd_register_airplay(dnssd_t *dnssd, const char *name, unsigned short port, co
 	dnssd->TXTRecordSetValue(&txtRecord, "deviceid", strlen(deviceid), deviceid);
 	dnssd->TXTRecordSetValue(&txtRecord, "features", strlen("0x5A7FFFF7,0xE"), "0x5A7FFFF7,0xE");
 	dnssd->TXTRecordSetValue(&txtRecord, "model", strlen(GLOBAL_MODEL), GLOBAL_MODEL);
+	dnssd->TXTRecordSetValue(&txtRecord, "srcvers", strlen(GLOBAL_VERSION), GLOBAL_VERSION);
 	dnssd->TXTRecordSetValue(&txtRecord, "vv", 1, "2");
 
 	/* Register the service */
